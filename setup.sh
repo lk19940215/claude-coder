@@ -249,17 +249,19 @@ read_glm_model() {
 read_deepseek_model() {
     echo "请选择 DeepSeek 模型:" >&2
     echo "" >&2
-    echo "  1) deepseek-chat   - 通用对话，速度快" >&2
-    echo "  2) deepseek-reasoner - 深度推理，更适合复杂任务" >&2
+    echo "  1) deepseek-chat     - 通用对话 (V3)，速度快成本低 [推荐日常使用]" >&2
+    echo "  2) deepseek-reasoner - 纯推理模式 (R1)，全链路使用 R1，成本最高 [适合攻坚]" >&2
+    echo "  3) deepseek-hybrid   - 混合模式 (R1 + V3)，规划用 R1，执行用 V3 [性价比之选]" >&2
     echo "" >&2
     local model_choice
     while true; do
-        read -p "选择 [1-2，默认 1]: " model_choice
+        read -p "选择 [1-3，默认 1]: " model_choice
         model_choice="${model_choice:-1}"
         case $model_choice in
             1) echo "deepseek-chat"; break ;;
             2) echo "deepseek-reasoner"; break ;;
-            *) echo "请输入 1 或 2" >&2 ;;
+            3) echo "deepseek-hybrid"; break ;;
+            *) echo "请输入 1, 2 或 3" >&2 ;;
         esac
     done
 }
@@ -295,30 +297,42 @@ write_deepseek_config() {
     write_config_header "DeepSeek" "模型: ${model} | API_TIMEOUT_MS=600000 防止长输出超时（10分钟）"
     {
         echo "MODEL_PROVIDER=deepseek"
-        echo "# 注意：若选择 deepseek-reasoner，费用约为 chat 的 5-10 倍"
-        echo "ANTHROPIC_MODEL=${model}"
         echo "ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic"
         echo "ANTHROPIC_API_KEY=$api_key"
         echo "ANTHROPIC_AUTH_TOKEN=$api_key"
         echo ""
-        echo "# Claude Code 配置"
-        echo "ANTHROPIC_SMALL_FAST_MODEL=${model}"
         echo "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
         
-        if [[ "${model}" != *reasoner* ]]; then
-            echo ""
-            echo "# [DeepSeek Chat 降本策略]"
+        if [[ "${model}" == "deepseek-chat" ]]; then
+            echo "# [DeepSeek Chat 降本策略 (默认)]"
             echo "# 为了防止 Claude Code 客户端发送 'thinking' 参数（导致 DeepSeek 按 Reasoner 计费），"
-            echo "# 我们通过 run.sh 将模型伪装为 'claude-3-haiku-20240307'。"
-            echo "# Claude Code 认为 Haiku 不支持思考，因此不发 thinking 参数。"
-            echo "# DeepSeek 收到 Haiku 请求后，会自动 Fallback 到默认的 deepseek-chat (V3)。"
+            echo "# 我们使用自定义模型名 'deepseek-chat-optimized'。"
+            echo "# Claude Code 对未知模型默认禁用 thinking。"
+            echo "# DeepSeek 收到未知模型名后，会自动 Fallback 到默认的 deepseek-chat (V3)。"
             echo "# 最终效果：使用 V3 模型，但零 Reasoner 费用。"
-            echo "# ANTHROPIC_THINKING_BUDGET=0"
-        else
-            echo ""
-            echo "# [DeepSeek Reasoner 模式]"
-            echo "# 允许使用 Thinking 功能"
+            echo "ANTHROPIC_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-chat-optimized"
+        elif [[ "${model}" == "deepseek-reasoner" ]]; then
+            echo "# [DeepSeek Pure Reasoner 模式]"
+            echo "# 全链路使用 DeepSeek R1 推理模型，成本最高，推理能力最强"
+            echo "ANTHROPIC_MODEL=deepseek-reasoner"
+            echo "ANTHROPIC_SMALL_FAST_MODEL=deepseek-reasoner"
             echo "ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-reasoner"
+            echo "ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-reasoner"
+            echo "ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-reasoner"
+        elif [[ "${model}" == "deepseek-hybrid" ]]; then
+            echo "# [DeepSeek Hybrid 混合模式]"
+            echo "# 大脑 (Opus/Main) 使用 R1 进行复杂规划"
+            echo "# 手脚 (Sonnet/Haiku) 使用 V3 (optimized) 进行快速执行"
+            echo "# 平衡了推理能力与执行成本"
+            echo "ANTHROPIC_MODEL=deepseek-reasoner"
+            echo "ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-reasoner"
+            echo "ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-chat-optimized"
+            echo "ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-chat-optimized"
         fi
     } >> "$CONFIG_FILE"
     append_config_common 600000

@@ -320,16 +320,17 @@ bash claude-auto-loop/setup.sh
 
 选择 GLM 时，setup.sh 会提示选择模型版本（GLM 4.7 / GLM 5）。**额度不足时可选 DeepSeek**：新用户有赠送余额，官网 <https://platform.deepseek.com/api_keys> 创建 API Key 即可。
 
-**DeepSeek 模型与成本**（setup 可选，或手动改 `config.env` 中的 `ANTHROPIC_MODEL`）：
+**DeepSeek 三种模式**（setup.sh 中选择）：
 
-| 模型 | 输入（未命中缓存） | 输出 | 说明 |
-|------|-------------------|------|------|
-| deepseek-chat | 2 元/百万 tokens | 8 元/百万 tokens | 通用对话，速度快，**推荐日常使用** |
-| deepseek-reasoner | 4 元/百万 tokens | 16 元/百万 tokens | 深度推理（Chain-of-Thought），复杂任务更强，价格约 2 倍 |
+| 模式 | 适用场景 | 成本 | 原理 |
+|---|---|---|---|
+| **Chat 模式** (推荐) | 日常开发、高频小任务 | ⭐ (最低) | 全链路使用 `deepseek-chat` (V3)。通过 `optimized` 别名强制禁用 Thinking，确保 0 Reasoner 费用。 |
+| **Hybrid 模式** (混合) | 复杂任务、性价比 | ⭐⭐ (中) | 大脑 (Opus) 用 **R1** 规划，手脚 (Sonnet/Haiku) 用 **V3** 执行。平衡智商与成本。 |
+| **Reasoner 模式** | 攻坚克难、逻辑推理 | ⭐⭐⭐ (最高) | 全链路使用 `deepseek-reasoner` (R1)。推理能力最强，但每次操作（含读文件）都按 R1 计费。 |
 
-Agent 每轮「思考→工具调用→结果」= 1 次 API 请求，完整 Session 通常有数十次调用；按 token 计费，非按次数。
+> **提示**：DeepSeek Reasoner 价格约为 Chat 的 5-10 倍。推荐使用 **Chat 模式** 或 **Hybrid 模式**。
 
-setup 选择 DeepSeek 后，config.env 会写入 `ANTHROPIC_SMALL_FAST_MODEL`、`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`，run.sh 启动时会显式传 `--model`，确保统一走所选模型。
+setup 选择 DeepSeek 后，config.env 会根据所选模式自动生成对应的 `ANTHROPIC_MODEL` 和别名映射。
 
 ### MCP 工具（浏览器测试）
 

@@ -317,16 +317,19 @@ Defaults to the official Claude API. For alternative models:
 | **DeepSeek** | `api.deepseek.com` official Anthropic-compatible API; new users get granted balance |
 | Custom | Any Anthropic-compatible BASE_URL |
 
-**DeepSeek model and cost** (choose in setup, or edit `ANTHROPIC_MODEL` in config.env):
+**DeepSeek Three Modes** (Select in setup.sh):
 
-| Model | Input (cache miss) | Output | Notes |
-|-------|--------------------|--------|-------|
-| deepseek-chat | ¥2/M tokens | ¥8/M tokens | General use, fast; **recommended for daily use** |
-| deepseek-reasoner | ¥4/M tokens | ¥16/M tokens | Chain-of-thought reasoning, stronger on complex tasks; ~2× cost |
+| Mode | Use Case | Cost | Mechanism |
+|---|---|---|---|
+| **Chat Mode** (Recommended) | Daily coding, frequent tasks | ⭐ (Lowest) | Uses `deepseek-chat` (V3) everywhere. Uses `optimized` alias to force disable Thinking, ensuring 0 Reasoner costs. |
+| **Hybrid Mode** | Complex tasks, balanced | ⭐⭐ (Medium) | Brain (Opus) uses **R1**, Hands (Sonnet/Haiku) use **V3**. Balanced intelligence and cost. |
+| **Reasoner Mode** | Hard problems, logic heavy | ⭐⭐⭐ (Highest) | Uses `deepseek-reasoner` (R1) everywhere. Strongest reasoning, but every operation (including reading files) is billed as R1. |
 
-Agent each round (think → tool call → result) = 1 API request; a full Session typically has dozens of calls. Billing is per token, not per call.
+> **Note**: DeepSeek Reasoner costs 5-10x more than Chat. **Chat Mode** or **Hybrid Mode** is recommended.
 
-After selecting DeepSeek in setup, config.env is written with `ANTHROPIC_SMALL_FAST_MODEL` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, and run.sh passes `--model` explicitly so all requests use the chosen model.
+Agent executes one API call per "Think → Tool → Result" cycle. A full session typically involves dozens of calls; billed by token usage.
+
+When DeepSeek is selected, `config.env` includes `ANTHROPIC_SMALL_FAST_MODEL` and `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`. `run.sh` explicitly passes `--model` to ensure consistency.
 
 ### MCP Tools (Browser Testing)
 

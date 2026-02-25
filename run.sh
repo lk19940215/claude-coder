@@ -27,7 +27,7 @@
 set -euo pipefail
 
 # ============ 配置 ============
-MAX_SESSIONS=1         # 最大会话数（安全上限）
+MAX_SESSIONS=30         # 最大会话数（安全上限）
 CLAUDE_PID=""            # 当前 claude 子进程 PID，供 trap 终止用
 THINKING_PID=""          # 思考中提示的 PID，供 trap 终止用
 MAX_RETRY=3              # 每个任务最大重试次数
@@ -458,30 +458,6 @@ main() {
         [ -n "${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:-}" ] && export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
         [ -n "${CLAUDE_CODE_EFFORT_LEVEL:-}" ] && export CLAUDE_CODE_EFFORT_LEVEL
         
-        # DeepSeek 智能映射策略：
-        # 1. 如果配置为 deepseek-reasoner，则使用 reasoner（允许 Thinking/高价）
-        # 2. 如果配置为 deepseek-chat (或默认)，则伪装成 claude-3-haiku-20240307
-        #    - 原理：Claude Code 认为 Haiku 不支持 Thinking，因此不发送 thinking 参数
-        #    - 结果：DeepSeek 收到 Haiku 请求后 Fallback 到 V3 (Chat)，避开 Reasoner 计费
-        if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [[ "${ANTHROPIC_BASE_URL}" == *deepseek* ]]; then
-            # 默认为 chat，除非显式包含 reasoner
-            if [[ "${ANTHROPIC_MODEL:-}" != *reasoner* ]]; then
-                # 方案 A: 降本伪装 (Haiku Shim)
-                export ANTHROPIC_MODEL="claude-3-haiku-20240307"
-                # 覆盖所有内部别名，彻底封死 Thinking 路径
-                export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-3-haiku-20240307"
-                export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-3-haiku-20240307"
-                export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-3-haiku-20240307"
-                # 仍保留 budget=0 作为双重保险
-                export ANTHROPIC_THINKING_BUDGET=0
-            else
-                # 方案 B: 强推理模式 (Reasoner)
-                # 允许使用 thinking (不设置 budget=0 或设置较大值)
-                # 确保 Opus 映射到 Reasoner 以利用其能力
-                export ANTHROPIC_DEFAULT_OPUS_MODEL="deepseek-reasoner"
-            fi
-        fi
-        
         [ -n "${ANTHROPIC_THINKING_BUDGET:-}" ] && export ANTHROPIC_THINKING_BUDGET
         log_ok "模型配置已加载: ${MODEL_PROVIDER:-unknown}${ANTHROPIC_MODEL:+ ($ANTHROPIC_MODEL)}"
         # deepseek-reasoner 成本提醒
@@ -502,7 +478,7 @@ main() {
         fi
         
         # DeepSeek 时显式传 --model 覆盖 settings
-        # 注意：run.sh 前面可能已将 ANTHROPIC_MODEL 重写为 claude-3-haiku 以禁用 thinking
+        # 注意：run.sh 前面可能已将 ANTHROPIC_MODEL 重写为 deepseek-chat-optimized 以禁用 thinking
         if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [[ "${ANTHROPIC_BASE_URL}" == *deepseek* ]] && [ -n "${ANTHROPIC_MODEL:-}" ]; then
             CLAUDE_MODEL_FLAGS=(--model "$ANTHROPIC_MODEL")
         else
