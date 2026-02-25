@@ -36,6 +36,15 @@ bash claude-auto-loop/run.sh
 
 > **Tip**: `requirements.md` takes priority over CLI arguments. You can edit it anytime — the next session will automatically pick up the latest content.
 
+### Script Call Order
+
+| Script | When | Description |
+|--------|------|-------------|
+| **check_prerequisites** | Auto on run.sh start | Checks claude CLI, python3, CLAUDE.md, validate.sh; prompts to run setup.sh if no config.env |
+| **setup.sh** | Manual (optional) | Configure model (Claude / GLM / DeepSeek) and MCP tools. **To switch provider or fix quota**: run again and choose `y` to reconfigure |
+| **init.sh** | Per session by Agent | Auto-generated on first scan; starts environment (install deps, start services) |
+| **validate.sh** | Auto after each session | Validates Agent output, git commit, health checks |
+
 That's it. Details below.
 
 ---
@@ -113,7 +122,7 @@ while session < 50:                          # Safety cap, prevents infinite loo
 
     record git HEAD                          # Remember pre-session code state
 
-    claude -p "follow CLAUDE.md"             # ← Agent picks task, implements, tests, commits
+    claude -p "follow CLAUDE.md"             # ← -p = Print mode: exits after run, scriptable; Agent picks task, implements, tests, commits
 
     bash validate.sh                         # ← Harness externally validates Agent's output
 
@@ -285,15 +294,50 @@ Defaults to the official Claude API. For alternative models:
 | Option | Description |
 |---|---|
 | Claude Official | Default, highest quality |
-| GLM 4.7 (Zhipu) | `open.bigmodel.cn` compatible gateway, direct China access, lower cost |
-| GLM 4.7 (Z.AI) | `api.z.ai` compatible gateway, overseas node |
+| GLM (Zhipu) | `open.bigmodel.cn` compatible gateway, optional GLM 4.7 / GLM 5 |
+| GLM (Z.AI) | `api.z.ai` compatible gateway, overseas node |
+| **DeepSeek** | `api.deepseek.com` official Anthropic-compatible API; new users get granted balance |
 | Custom | Any Anthropic-compatible BASE_URL |
 
 ### MCP Tools (Browser Testing)
 
 For projects with a web frontend, consider installing [Playwright MCP](https://github.com/microsoft/playwright-mcp). The Agent will use it for end-to-end browser testing (click, snapshot, navigate, and 25+ other tools). Pure backend projects can skip this.
 
-Configuration is saved in `config.env` (auto-added to `.gitignore`), only affects this tool, doesn't change global settings.
+Configuration is saved in `config.env` (auto-added to `.gitignore`), only affects this tool, doesn't change global settings. **To switch model provider**: run `bash claude-auto-loop/setup.sh` again, choose `y` to reconfigure.
+
+**config.env is editable** after generation — no need to re-run setup. For example: add `CLAUDE_DEBUG=mcp` for debug logs; change `ANTHROPIC_MODEL` to switch model version.
+
+### Progress Indicator During Run
+
+While run.sh invokes Claude Code, it prints a progress message every 15 seconds. Via Claude Code's **PreToolUse** hook (`hooks/phase-signal.sh`): when the model first calls a tool (Bash, Edit, Read, etc.), the message switches from "Thinking..." to "Coding...". Based on actual tool calls, no time-based heuristics.
+
+### Common Issues
+
+**Quota exhausted / 429 error?**  
+Run `bash claude-auto-loop/setup.sh` to switch provider. Options: **DeepSeek** (granted balance for new users, [create API Key](https://platform.deepseek.com/api_keys)); OpenRouter (50 req/day unpaid, [openrouter.ai](https://openrouter.ai)); Anthropic Console ($5 one-time, [console.anthropic.com](https://console.anthropic.com)).
+
+**No output for a long time after model call?**  
+run.sh uses `script` to create a PTY for real-time output. First API response often takes 1–2 minutes (longer for some endpoints). If still no output, add `CLAUDE_DEBUG=api` in config.env.
+
+**How does "Thinking..." switch to "Coding..."?**  
+See "Progress Indicator During Run" above: PreToolUse hook writes `.phase` on first tool call.
+
+**Model says "needs permission to create file" but project_profile.json/tasks.json not generated?**  
+run.sh adds `--permission-mode bypassPermissions`. If it still fails, try `--dangerously-skip-permissions` (trusted environments only).
+
+**Ctrl+C doesn't exit?**  
+run.sh runs claude in background; trap handles SIGINT. Try Ctrl+C twice, or `kill -9 <run.sh PID>`.
+
+**How to get more logs (e.g. playwright-mcp Click)?**  
+Add to config.env (no need to re-run setup):
+```
+CLAUDE_DEBUG=verbose    # full per-turn output
+CLAUDE_DEBUG=mcp        # MCP calls (incl. Playwright)
+CLAUDE_DEBUG=api,mcp    # API + MCP
+```
+
+**Can I interact with Claude in CLI mode?**  
+run.sh uses `-p` (headless) so the Agent works autonomously. For interactive collaboration, use **Cursor IDE mode**: copy cursor.mdc to `.cursor/rules/` and run each conversation manually.
 
 ---
 
@@ -312,8 +356,10 @@ This tool builds on Anthropic's [long-running agent harness](https://www.anthrop
 | Runtime env | Claude CLI only | Claude CLI + Cursor IDE |
 | Testing tools | None | Pluggable Playwright MCP browser automation |
 | Validation hooks | None | `validate.d/` hook directory, user-extensible |
-| Model selection | Claude only | GLM 4.7 and other Anthropic-compatible models |
+| Model selection | Claude only | GLM 4.7/5, DeepSeek, and other Anthropic-compatible models |
 | Requirements input | CLI one-liner argument | `requirements.md` document (specify tech stack, styles, editable anytime) |
+| Progress indicator | None | PreToolUse hook switches "Thinking..." → "Coding..." on first tool call |
+| Debug output | None | `CLAUDE_DEBUG` in config.env for verbose/mcp logs, anytime |
 
 ---
 
@@ -331,6 +377,8 @@ This tool builds on Anthropic's [long-running agent harness](https://www.anthrop
 | `setup.sh` | Interactive setup (model selection + MCP tool installation) |
 | `cursor.mdc` | Cursor rules file: copy to `.cursor/rules/` to use |
 | `requirements.example.md` | Requirements template: copy as `requirements.md` and fill in your detailed needs |
+| `hooks/phase-signal.sh` | PreToolUse hook: writes `.phase` on first tool call for progress indicator |
+| `hooks-settings.json` | Claude Code hooks config, loaded via `--settings` |
 | `README.md` | Chinese documentation |
 | `README.en.md` | This file (English documentation) |
 
@@ -338,12 +386,13 @@ This tool builds on Anthropic's [long-running agent harness](https://www.anthrop
 
 | File | Description |
 |---|---|
-| `config.env` | Model + MCP config (generated by setup.sh, contains API Keys, gitignored) |
+| `config.env` | Model + MCP config (by setup.sh; API Key, optional CLAUDE_DEBUG, gitignored) |
 | `project_profile.json` | Auto-detected project metadata (tech stack, services, ports, etc.) |
 | `init.sh` | Auto-generated environment init script (idempotent design) |
 | `tasks.json` | Task list + state machine tracking |
 | `progress.txt` | Cross-session memory log (append-only) |
 | `session_result.json` | Temporary file (deleted by harness after each session) |
+| `.phase` | Progress state (thinking/coding), written by PreToolUse hook, gitignored |
 
 ### Custom Validation Hooks
 

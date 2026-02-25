@@ -4,14 +4,14 @@
 #
 # 用法: bash claude-auto-loop/setup.sh
 #
-# 交互式配置：
-#   1. 模型提供商（Claude 官方 / GLM / 自定义）
-#   2. MCP 工具（Playwright 浏览器自动化等）
+# 模块结构:
+#   主流程 main()           - 交互选择 + 调用提供商写入
+#   配置写入 write_*        - write_config_header, append_config_common
+#   提供商 write_*_config   - Claude/GLM/DeepSeek/自定义
+#   MCP configure_mcp_tools - Playwright 等
 #
-# 配置保存到 claude-auto-loop/config.env。
-# run.sh 启动时自动加载此文件。
-#
-# config.env 包含 API Key，不应提交到 git。
+# 配置保存到 config.env，run.sh 加载。含 API Key，已 gitignore。
+# DeepSeek 参考: https://api-docs.deepseek.com/zh-cn/guides/anthropic_api
 # ============================================================
 
 set -euo pipefail
@@ -65,22 +65,28 @@ main() {
     echo "     需要 Anthropic API Key 或 Claude Pro/Max 订阅"
     echo "     质量最高，成本较高"
     echo ""
-    echo "  2) GLM 4.7 via 智谱开放平台 (open.bigmodel.cn)"
-    echo "     国内直连，成本低"
+    echo "  2) GLM via 智谱开放平台 (open.bigmodel.cn)"
+    echo "     国内直连，可选 GLM 4.7 / GLM 5"
+    echo -e "     获取 API Key: ${BLUE}https://open.bigmodel.cn/usercenter/apikeys${NC}"
     echo ""
-    echo "  3) GLM 4.7 via Z.AI 平台 (api.z.ai)"
-    echo "     海外节点，成本低"
+    echo "  3) GLM via Z.AI 平台 (api.z.ai)"
+    echo "     海外节点，可选 GLM 4.7 / GLM 5"
+    echo -e "     获取 API Key: ${BLUE}https://z.ai/manage-apikey/apikey-list${NC}"
     echo ""
-    echo "  4) 自定义"
+    echo "  4) DeepSeek (api.deepseek.com)"
+    echo -e "     ${GREEN}新用户有赠送余额${NC}，Anthropic 兼容，国内直连"
+    echo -e "     获取 API Key: ${BLUE}https://platform.deepseek.com/api_keys${NC}"
+    echo ""
+    echo "  5) 自定义"
     echo "     手动填写 Anthropic 兼容的 BASE_URL 和 API Key"
     echo ""
 
     local choice
     while true; do
-        read -p "选择 [1-4]: " choice
+        read -p "选择 [1-5]: " choice
         case $choice in
-            1|2|3|4) break ;;
-            *) echo "请输入 1-4" ;;
+            1|2|3|4|5) break ;;
+            *) echo "请输入 1-5" ;;
         esac
     done
 
@@ -93,21 +99,33 @@ main() {
             ;;
         2)
             # GLM via 智谱
+            local glm_model
+            glm_model=$(read_glm_model | tr -d '\n')
             local api_key
-            api_key=$(read_api_key "智谱开放平台")
+            api_key=$(read_api_key "智谱开放平台" "https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys" | tr -d '\n')
             write_glm_config "glm-bigmodel" \
                 "https://open.bigmodel.cn/api/anthropic" \
-                "$api_key"
+                "$api_key" \
+                "$glm_model"
             ;;
         3)
             # GLM via Z.AI
+            local glm_model
+            glm_model=$(read_glm_model | tr -d '\n')
             local api_key
-            api_key=$(read_api_key "Z.AI 平台")
+            api_key=$(read_api_key "Z.AI 平台" "https://z.ai/manage-apikey/apikey-list" | tr -d '\n')
             write_glm_config "glm-zai" \
                 "https://api.z.ai/api/anthropic" \
-                "$api_key"
+                "$api_key" \
+                "$glm_model"
             ;;
         4)
+            # DeepSeek（按官方 Anthropic API 兼容文档配置）
+            local api_key
+            api_key=$(read_api_key "DeepSeek" "https://platform.deepseek.com/api_keys" | tr -d '\n')
+            write_deepseek_config "$api_key"
+            ;;
+        5)
             # 自定义
             local base_url api_key
             echo "请输入 Anthropic 兼容的 BASE_URL:"
@@ -141,9 +159,16 @@ main() {
 }
 
 # ============ 读取 API Key ============
+# 用法: read_api_key "平台名称" "获取入口URL"（URL 可选）
+# 注意：提示输出到 stderr，这样在 api_key=$(read_api_key ...) 时用户仍能看到
 read_api_key() {
     local platform="$1"
-    echo "请输入 $platform 的 API Key:"
+    local api_url="${2:-}"
+    echo "请输入 $platform 的 API Key:" >&2
+    if [ -n "$api_url" ]; then
+        echo -e "  ${BLUE}获取入口: $api_url${NC}" >&2
+        echo "" >&2
+    fi
     local key
     read -p "  API Key: " key
     if [ -z "$key" ]; then
@@ -153,58 +178,103 @@ read_api_key() {
     echo "$key"
 }
 
-# ============ 写入配置文件 ============
+# ============ 配置写入（模块化） ============
+# 参考 DeepSeek 官方文档: https://api-docs.deepseek.com/zh-cn/guides/anthropic_api
 
-write_claude_config() {
-    cat > "$CONFIG_FILE" << 'EOF'
-# Claude Auto Loop 模型配置
-# 由 setup.sh 生成，请勿提交到 git（包含 API Key）
-#
-# 提供商: Claude 官方
-# 使用默认 Claude API，无需额外环境变量
-
-MODEL_PROVIDER=claude
-EOF
-    log_ok "已配置为 Claude 官方模型"
-}
-
-write_glm_config() {
+write_config_header() {
     local provider="$1"
-    local base_url="$2"
-    local api_key="$3"
-
+    local desc="${2:-}"
     cat > "$CONFIG_FILE" << EOF
 # Claude Auto Loop 模型配置
 # 由 setup.sh 生成，请勿提交到 git（包含 API Key）
 #
-# 提供商: GLM ($provider)
-
-MODEL_PROVIDER=$provider
-ANTHROPIC_BASE_URL=$base_url
-ANTHROPIC_API_KEY=$api_key
-API_TIMEOUT_MS=3000000
-MCP_TOOL_TIMEOUT=30000
+# 提供商: $provider
+${desc:+# $desc
+}
 EOF
-    log_ok "已配置为 GLM 模型 ($provider)"
+}
+
+append_config_common() {
+    local timeout_ms="${1:-3000000}"
+    echo "API_TIMEOUT_MS=$timeout_ms" >> "$CONFIG_FILE"
+    echo "MCP_TOOL_TIMEOUT=30000" >> "$CONFIG_FILE"
+}
+
+# --- 提供商: Claude 官方 ---
+write_claude_config() {
+    write_config_header "Claude 官方" "使用默认 Claude API，无需额外环境变量"
+    echo "MODEL_PROVIDER=claude" >> "$CONFIG_FILE"
+    append_config_common 3000000
+    log_ok "已配置为 Claude 官方模型"
+}
+
+read_glm_model() {
+    echo "请选择 GLM 模型版本:" >&2
+    echo "" >&2
+    echo "  1) GLM 4.7  - 旗舰模型，推理与代码能力强" >&2
+    echo "  2) GLM 5    - 最新模型（2026），能力更强" >&2
+    echo "" >&2
+    local model_choice
+    while true; do
+        read -p "选择 [1-2，默认 1]: " model_choice
+        model_choice="${model_choice:-1}"
+        case $model_choice in
+            1) echo "glm-4.7"; break ;;
+            2) echo "glm-5"; break ;;
+            *) echo "请输入 1 或 2" >&2 ;;
+        esac
+    done
+}
+
+# --- 提供商: GLM (智谱 / Z.AI) ---
+write_glm_config() {
+    local provider="${1:-glm-bigmodel}"
+    local base_url="${2:-}"
+    local api_key="${3:-}"
+    local model="${4:-glm-4.7}"
+
+    write_config_header "GLM ($provider)" "模型: $model"
+    {
+        echo "MODEL_PROVIDER=$provider"
+        echo "ANTHROPIC_MODEL=$model"
+        echo "ANTHROPIC_BASE_URL=$base_url"
+        echo "ANTHROPIC_API_KEY=$api_key"
+    } >> "$CONFIG_FILE"
+    append_config_common 3000000
+    log_ok "已配置为 GLM 模型 (${provider}, ${model})"
     log_info "BASE_URL: $base_url"
 }
 
+# --- 提供商: DeepSeek ---
+# 参考: https://api-docs.deepseek.com/zh-cn/guides/anthropic_api
+write_deepseek_config() {
+    local api_key="$1"
+
+    write_config_header "DeepSeek" "模型: deepseek-chat | API_TIMEOUT_MS=600000 防止长输出超时（10分钟）"
+    {
+        echo "MODEL_PROVIDER=deepseek"
+        echo "ANTHROPIC_MODEL=deepseek-chat"
+        echo "ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic"
+        echo "ANTHROPIC_API_KEY=$api_key"
+        echo "ANTHROPIC_AUTH_TOKEN=$api_key"
+    } >> "$CONFIG_FILE"
+    append_config_common 600000
+    log_ok "已配置为 DeepSeek（Anthropic 兼容，按官方文档）"
+    log_info "BASE_URL: https://api.deepseek.com/anthropic"
+}
+
+# --- 提供商: 自定义 ---
 write_custom_config() {
     local base_url="$1"
     local api_key="$2"
 
-    cat > "$CONFIG_FILE" << EOF
-# Claude Auto Loop 模型配置
-# 由 setup.sh 生成，请勿提交到 git（包含 API Key）
-#
-# 提供商: 自定义
-
-MODEL_PROVIDER=custom
-ANTHROPIC_BASE_URL=$base_url
-ANTHROPIC_API_KEY=$api_key
-API_TIMEOUT_MS=3000000
-MCP_TOOL_TIMEOUT=30000
-EOF
+    write_config_header "自定义"
+    {
+        echo "MODEL_PROVIDER=custom"
+        echo "ANTHROPIC_BASE_URL=$base_url"
+        echo "ANTHROPIC_API_KEY=$api_key"
+    } >> "$CONFIG_FILE"
+    append_config_common 3000000
     log_ok "已配置为自定义模型"
     log_info "BASE_URL: $base_url"
 }
@@ -263,6 +333,12 @@ configure_mcp_tools() {
         echo "MCP_PLAYWRIGHT=false" >> "$CONFIG_FILE"
 
         log_info "已跳过 Playwright MCP 安装"
+    fi
+    # 可选：调试输出（随时可改，无需重跑 setup）
+    if ! grep -q "CLAUDE_DEBUG" "$CONFIG_FILE" 2>/dev/null; then
+        echo "" >> "$CONFIG_FILE"
+        echo "# 可选：Claude 调试（空则静默；verbose=完整输出, mcp=MCP调用）" >> "$CONFIG_FILE"
+        echo "# CLAUDE_DEBUG=verbose" >> "$CONFIG_FILE"
     fi
 }
 

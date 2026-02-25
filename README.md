@@ -20,7 +20,8 @@ cd /path/to/your/project
 git clone --depth 1 https://github.com/lk19940215/claude-auto-loop.git
 rm -rf claude-auto-loop/.git    # 移除工具自带的 git 历史，避免嵌套仓库
 
-# 2. 启动（二选一）
+# 2. 首次启动（必须二选一，提供需求）
+#    不能直接运行 run.sh，否则会报错「首次运行需要提供需求描述」
 
 # 快捷模式：一句话需求
 bash claude-auto-loop/run.sh "实现用户登录功能，支持邮箱和 OAuth"
@@ -30,11 +31,20 @@ cp claude-auto-loop/requirements.example.md requirements.md
 vim requirements.md                # 编辑你的需求
 bash claude-auto-loop/run.sh     # 自动读取 requirements.md
 
-# 3. 后续继续（自动从上次中断处恢复）
+# 3. 后续继续（仅在首次完成后，自动从上次中断处恢复）
 bash claude-auto-loop/run.sh
 ```
 
 > **提示**：`requirements.md` 优先于 CLI 参数。你可以随时修改它，下一个 session 会自动读取最新内容。
+
+### 脚本调用顺序说明
+
+| 脚本 | 何时调用 | 说明 |
+|------|----------|------|
+| **check_prerequisites** | run.sh 启动时自动执行 | 检查 claude CLI、python3、CLAUDE.md、validate.sh 是否存在；无 config.env 时会提示可运行 setup.sh |
+| **setup.sh** | 用户手动运行（可选） | 配置模型（Claude / GLM / DeepSeek 等）和 MCP 工具。**切换模型或额度不足时**：再次运行并选择 `y` 重新配置 |
+| **init.sh** | 每次 coding session 内由 Agent 调用 | Agent 首次扫描后自动生成，负责项目环境的启动（安装依赖、启动服务等） |
+| **validate.sh** | 每次 session 结束后由 run.sh 自动调用 | 校验 Agent 产出、git 提交、服务健康检查 |
 
 就这么多。下面是详细说明。
 
@@ -113,7 +123,7 @@ while session < 50:                          # 安全上限，防止无限循环
 
     记录 git HEAD                             # 记住 session 前的代码状态
 
-    claude -p "按 CLAUDE.md 执行"             # ← Agent 自己选任务、实现、测试、提交
+    claude -p "按 CLAUDE.md 执行"             # ← -p 为 Print 模式：执行完即退出，可脚本化；Agent 自己选任务、实现、测试、提交
 
     bash validate.sh                          # ← harness 外部校验 Agent 的产出
 
@@ -285,15 +295,62 @@ bash claude-auto-loop/setup.sh
 | 选项 | 说明 |
 |---|---|
 | Claude 官方 | 默认，质量最高 |
-| GLM 4.7 (智谱) | `open.bigmodel.cn` 兼容网关，国内直连，成本低 |
-| GLM 4.7 (Z.AI) | `api.z.ai` 兼容网关，海外节点 |
+| GLM (智谱) | `open.bigmodel.cn` 兼容网关，国内直连；可选 **GLM 4.7** 或 **GLM 5** |
+| GLM (Z.AI) | `api.z.ai` 兼容网关，海外节点；可选 GLM 4.7 或 GLM 5 |
+| **DeepSeek** | `api.deepseek.com` 官方 Anthropic 兼容（含 `ANTHROPIC_AUTH_TOKEN`、`API_TIMEOUT_MS=600000`）；新用户有赠送余额 |
 | 自定义 | 任意 Anthropic 兼容的 BASE_URL |
+
+选择 GLM 时，setup.sh 会提示选择模型版本（GLM 4.7 / GLM 5）。**额度不足时可选 DeepSeek**：新用户有赠送余额，官网 <https://platform.deepseek.com/api_keys> 创建 API Key 即可。
 
 ### MCP 工具（浏览器测试）
 
 如果项目有 Web 前端，建议安装 [Playwright MCP](https://github.com/microsoft/playwright-mcp)，Agent 将用它做端到端浏览器测试（click、snapshot、navigate 等 25+ 工具）。纯后端项目可跳过。
 
-配置保存在 `config.env`（自动加入 `.gitignore`），仅影响本工具，不改变全局配置。
+配置保存在 `config.env`（自动加入 `.gitignore`），仅影响本工具，不改变全局配置。**切换模型提供商**：再次运行 `bash claude-auto-loop/setup.sh`，选择 `y` 重新配置即可。
+
+**config.env 可编辑项**：生成后可手动编辑，无需重跑 setup。例如添加 `CLAUDE_DEBUG=mcp` 开启调试日志；修改 `ANTHROPIC_MODEL` 切换模型版本。
+
+### 运行时的进度提示
+
+run.sh 调用 Claude Code 时，会每 15 秒输出一次进度提示。通过 Claude Code 的 **PreToolUse** hook（`hooks/phase-signal.sh`）检测：当模型首次调用工具（Bash、Edit、Read 等）时，提示从「思考中」切换为「AI 编码中」。基于实际工具调用，无需时间估算。
+
+### 常见问题
+
+**额度不足 / 429 错误？**  
+运行 `bash claude-auto-loop/setup.sh` 切换到其它提供商。推荐：
+
+| 提供商 | 免费额度 | 说明 |
+|--------|----------|------|
+| **DeepSeek** | 赠送余额（以平台为准） | 新用户注册即得，[创建 API Key](https://platform.deepseek.com/api_keys) |
+| OpenRouter | 50 次/日（未充值） | 需自备 key 或选免费模型，[openrouter.ai](https://openrouter.ai) |
+| Anthropic Console | $5 一次性 | 需海外手机，[console.anthropic.com](https://console.anthropic.com) |
+
+**模型调用后长时间无输出？**  
+run.sh 已通过 `script` 创建伪终端，强制实时显示模型输出。首次 API 响应通常需 1–2 分钟（智谱等国内节点可能更长）。若仍无输出，在 `config.env` 中添加 `CLAUDE_DEBUG=api` 查看 API 请求日志。
+
+**「思考中」如何切换为「AI 编码中」？**  
+见上节「运行时的进度提示」：PreToolUse hook 在首次工具调用时写入 `.phase`，进度提示自动切换。
+
+**模型报告「需要授权创建文件」但 project_profile.json/tasks.json 未生成？**  
+run.sh 已为 claude 添加 `--permission-mode bypassPermissions`，允许 Agent 在无人值守时直接创建/编辑文件，无需交互确认。若仍出现此问题，可改用 `--dangerously-skip-permissions`（仅建议在可信环境中使用）。
+
+**Ctrl+C 无法退出？**  
+run.sh 已将 claude 设为后台运行，trap 会捕获 SIGINT 并终止子进程。若仍无法退出，可尝试连续按两次 Ctrl+C，或使用 `kill -9 <run.sh的PID>`。
+
+**如何让终端显示更多日志（如 playwright-mcp Click）？**  
+在 `config.env` 中添加 `CLAUDE_DEBUG`，可随时修改、无需重跑 setup：
+
+```
+# 可选：调试输出（空则静默）
+CLAUDE_DEBUG=verbose    # 完整每轮输出
+CLAUDE_DEBUG=mcp        # MCP 调用（含 Playwright）
+CLAUDE_DEBUG=api,mcp    # API + MCP
+```
+
+调试完注释或删掉该行即可恢复静默。
+
+**CLI 模式下能否与 Claude 交互？**  
+run.sh 使用 `-p`（headless）模式运行，Agent 自主完成任务，不暂停等待确认。如需中途介入、对话式协作，请使用 **Cursor IDE 模式**（见「Cursor IDE 模式」章节）：将 cursor.mdc 复制到 `.cursor/rules/`，在 Cursor 中手动发起每次对话。
 
 ---
 
@@ -312,8 +369,10 @@ bash claude-auto-loop/setup.sh
 | 运行环境 | 仅 Claude CLI | 同时支持 Claude CLI + Cursor IDE |
 | 测试工具 | 无 | 可插拔 Playwright MCP 浏览器自动化 |
 | 校验扩展 | 无 | `validate.d/` 钩子目录，用户可自定义 |
-| 模型选择 | 仅 Claude | 支持 GLM 4.7 等 Anthropic 兼容模型 |
+| 模型选择 | 仅 Claude | 支持 GLM 4.7/5、DeepSeek 等 Anthropic 兼容模型 |
 | 需求输入 | CLI 一句话参数 | 支持 `requirements.md` 需求文档（可指定技术栈、样式、随时可改） |
+| 进度提示 | 无 | PreToolUse hook 精准切换「思考中」→「AI 编码中」 |
+| 调试输出 | 无 | config.env 中 `CLAUDE_DEBUG` 可随时开启 verbose/mcp 日志 |
 
 ---
 
@@ -331,18 +390,21 @@ bash claude-auto-loop/setup.sh
 | `setup.sh` | 交互式前置配置（模型选择 + MCP 工具安装） |
 | `cursor.mdc` | Cursor 规则文件：复制到 `.cursor/rules/` 使用 |
 | `requirements.example.md` | 需求文档模板：复制为 `requirements.md` 填写详细需求 |
+| `hooks/phase-signal.sh` | PreToolUse hook：首次工具调用时写入 `.phase`，供进度提示切换 |
+| `hooks-settings.json` | Claude Code hooks 配置，run.sh 通过 `--settings` 加载 |
 | `README.md` | 本文件 |
 
 **运行时生成**（项目特定，由 Agent 或 setup.sh 创建）：
 
 | 文件 | 说明 |
 |---|---|
-| `config.env` | 模型 + MCP 配置（由 setup.sh 生成，含 API Key，已 gitignore） |
+| `config.env` | 模型 + MCP 配置（由 setup.sh 生成，含 API Key、ANTHROPIC_MODEL、可选 CLAUDE_DEBUG 调试开关，已 gitignore） |
 | `project_profile.json` | 自动检测的项目元数据（技术栈、服务、端口等） |
 | `init.sh` | 自动生成的环境初始化脚本（幂等设计） |
 | `tasks.json` | 任务列表 + 状态机跟踪 |
 | `progress.txt` | 跨会话记忆日志（追加式） |
 | `session_result.json` | 临时文件（每次 session 后由 harness 删除） |
+| `.phase` | 进度状态文件（thinking/coding），由 PreToolUse hook 写入，已 gitignore） |
 
 ### 自定义校验钩子
 

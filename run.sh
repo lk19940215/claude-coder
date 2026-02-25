@@ -7,12 +7,18 @@
 #   首次运行（快捷模式）: bash claude-auto-loop/run.sh "你的需求描述"
 #   继续运行:             bash claude-auto-loop/run.sh
 #
-# 核心职责（harness 不信任 Agent，做外部校验）：
-#   1. 首次运行时：项目扫描 → 生成 profile/init.sh → 任务分解
-#   2. 循环调用 Claude Code 执行编码会话
-#   3. 每次会话后调用 validate.sh 校验
-#   4. 校验失败时自动 git 回滚 + 重试
-#   5. 所有任务 done 时自动退出
+# 执行顺序：
+#   1. 加载 config.env（若存在，由 setup.sh 生成）
+#   2. check_prerequisites：检查 claude/python3/CLAUDE.md/validate.sh，确保 git 仓库存在
+#   3. 首次：run_scan（Agent 扫描 → 生成 profile/init.sh/tasks.json）
+#   4. 循环：run_coding_session → validate.sh（失败则 git 回滚 + 重试）
+#   5. 所有任务 done 时退出
+#
+# 关键技术：
+#   - script -q /dev/null：创建 PTY 强制实时输出（解决非 TTY 缓冲）
+#   - 后台运行 + CLAUDE_PID + trap：确保 Ctrl+C 能正确终止并退出
+#   - --permission-mode bypassPermissions：允许 Agent 无需确认即可创建/编辑文件
+#   - PreToolUse hook：首次工具调用时写入 .phase，进度提示从「思考中」切至「AI 编码中」
 #
 # 本脚本不含任何项目特定信息。
 # 项目信息由 Agent 扫描后存入 project_profile.json。
@@ -22,6 +28,8 @@ set -euo pipefail
 
 # ============ 配置 ============
 MAX_SESSIONS=50          # 最大会话数（安全上限）
+CLAUDE_PID=""            # 当前 claude 子进程 PID，供 trap 终止用
+THINKING_PID=""          # 思考中提示的 PID，供 trap 终止用
 MAX_RETRY=3              # 每个任务最大重试次数
 PAUSE_EVERY=5            # 每 N 个会话暂停确认
 
@@ -34,6 +42,7 @@ SESSION_RESULT="$SCRIPT_DIR/session_result.json"
 PROFILE="$SCRIPT_DIR/project_profile.json"
 CLAUDE_MD="$SCRIPT_DIR/CLAUDE.md"
 VALIDATE_SH="$SCRIPT_DIR/validate.sh"
+PHASE_FILE="$SCRIPT_DIR/.phase"
 
 # ============ 颜色输出 ============
 RED='\033[0;31m'
@@ -46,6 +55,27 @@ log_info()  { echo -e "${BLUE}[INFO]${NC}  $1"; }
 log_ok()    { echo -e "${GREEN}[OK]${NC}    $1"; }
 log_warn()  { echo -e "${YELLOW}[WARN]${NC}  $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# 进度提示：通过 Claude Code PreToolUse hook 检测工具调用，精准切换「思考中」→「AI 编码中」
+# .phase 由 hooks/phase-signal.sh 在首次 PreToolUse 时写入 "coding"
+start_thinking_indicator() {
+    echo "thinking" > "$PHASE_FILE" 2>/dev/null || true
+    ( while true; do
+        sleep 15
+        phase="thinking"
+        [ -f "$PHASE_FILE" ] && phase=$(cat "$PHASE_FILE" 2>/dev/null | head -1) || true
+        if [ "$phase" = "coding" ]; then
+          echo -e "${GREEN}[INFO]${NC}  AI 编码中... $(date '+%H:%M:%S')" >&2
+        else
+          echo -e "${BLUE}[INFO]${NC}  思考中... $(date '+%H:%M:%S')" >&2
+        fi
+      done ) &
+    THINKING_PID=$!
+}
+stop_thinking_indicator() {
+    [ -n "$THINKING_PID" ] && kill $THINKING_PID 2>/dev/null && wait $THINKING_PID 2>/dev/null
+    THINKING_PID=""
+}
 
 # ============ 前置检查 ============
 check_prerequisites() {
@@ -164,7 +194,8 @@ has_code_files() {
 }
 
 rollback_to() {
-    local target_head="$1"
+    local target_head="${1:-}"
+    [ -z "$target_head" ] && { log_error "rollback_to 需要 target_head 参数"; return 1; }
     log_warn "回滚到 $target_head ..."
     cd "$PROJECT_ROOT"
     git reset --hard "$target_head"
@@ -185,7 +216,7 @@ rollback_to() {
 
 # 步骤 1: 项目扫描（生成 project_profile.json + init.sh）
 run_scan() {
-    local requirement="$1"
+    local requirement="${1:-}"
 
     if has_code_files; then
         log_info "检测到已有代码 → 旧项目模式（扫描现有项目）"
@@ -195,7 +226,17 @@ run_scan() {
         local project_type="new"
     fi
 
-    claude -p "
+    echo ""
+    log_info "正在调用 Claude Code 执行项目扫描..."
+    log_info "首次 API 响应可能需要 1-2 分钟，PreToolUse hook 将在首次工具调用时切换为「AI 编码中」"
+    echo "--------------------------------------------"
+    start_thinking_indicator
+    # 使用 script 创建 PTY，避免非交互式运行时输出被缓冲导致长时间无显示
+    # 后台运行以便 trap 能通过 CLAUDE_PID 终止，确保 Ctrl+C 可退出
+    # 使用 bypassPermissions 允许 Agent 无需交互确认即可创建/编辑文件
+    # --settings 加载 PreToolUse hook，首次工具调用时写入 .phase="coding"，供进度指示器切换
+    # CLAUDE_EXTRA_FLAGS 由 config.env 的 CLAUDE_DEBUG 控制，可输出 MCP/API 等调试日志
+    script -q /dev/null claude "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "
 你是项目初始化 Agent。请严格按照 claude-auto-loop/CLAUDE.md 中的「项目扫描协议」执行。
 
 项目类型: $project_type
@@ -232,8 +273,14 @@ run_scan() {
 关键要求:
 - project_profile.json 中所有字段必须基于实际文件扫描，禁止猜测
 - init.sh 必须幂等（已运行的服务不重复启动）
-" --cwd "$PROJECT_ROOT"
+" &
+    CLAUDE_PID=$!
+    wait $CLAUDE_PID
+    local scan_exit=$?
+    stop_thinking_indicator
+    CLAUDE_PID=""
 
+    echo "--------------------------------------------"
     # 验证关键文件是否生成
     local success=true
     if [ ! -f "$PROFILE" ]; then
@@ -272,19 +319,23 @@ build_mcp_hint() {
 
 # ============ 编码会话 ============
 run_coding_session() {
-    local session_num="$1"
+    local session_num="${1:-1}"
 
     rm -f "$SESSION_RESULT"
 
-    log_info "调用 Claude Code ..."
+    echo ""
+    log_info "正在调用 Claude Code (Session $session_num)..."
+    log_info "PreToolUse hook 检测工具调用，首次调用时自动切换为「AI 编码中」"
+    echo "--------------------------------------------"
+    start_thinking_indicator
 
     # 构建可选的 MCP 工具提示
-    local mcp_hint
-    mcp_hint=$(build_mcp_hint)
+    local mcp_hint=""
+    mcp_hint=$(build_mcp_hint 2>/dev/null || true)
 
-    set +e
-    claude -p "
-按照 claude-auto-loop/CLAUDE.md 中定义的工作流程执行。这是 Session $session_num。
+    # 先构建 prompt 再传入，避免 heredoc 中变量展开导致的 unbound variable
+    local coding_prompt
+    coding_prompt="按照 claude-auto-loop/CLAUDE.md 中定义的工作流程执行。这是 Session ${session_num}。
 
 严格执行 6 步流程：
 1. 恢复上下文（读取 project_profile.json、progress.txt、tasks.json、git log）
@@ -294,21 +345,30 @@ run_coding_session() {
 5. 测试验证（端到端测试，按状态机更新 status）
 6. 收尾（git commit + 更新 progress.txt + 写 session_result.json）
 ${mcp_hint:+
-可用工具提示：
-$mcp_hint}
+
+可用工具提示:
+${mcp_hint}}
 
 特别注意：
 - 你必须在结束前写入 claude-auto-loop/session_result.json
-- 严格遵守状态机迁移规则，不得跳步
-" --cwd "$PROJECT_ROOT"
+- 严格遵守状态机迁移规则，不得跳步"
+
+    set +e
+    # CLAUDE_EXTRA_FLAGS 由 config.env 的 CLAUDE_DEBUG 控制，可输出 MCP/API 等调试日志
+    script -q /dev/null claude "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "$coding_prompt" &
+    CLAUDE_PID=$!
+    wait $CLAUDE_PID
     local claude_exit=$?
+    stop_thinking_indicator
+    CLAUDE_PID=""
+    echo "--------------------------------------------"
     set -e
 
-    if [ $claude_exit -ne 0 ]; then
+    if [ "${claude_exit:-0}" -ne 0 ]; then
         log_warn "Claude Code 退出码: $claude_exit"
     fi
 
-    return $claude_exit
+    return "${claude_exit:-0}"
 }
 
 # ============ 主流程 ============
@@ -319,8 +379,8 @@ main() {
     echo "============================================"
     echo ""
 
-    # 信号处理：Ctrl+C / kill 时优雅退出
-    trap 'echo ""; log_warn "收到中断信号，正在安全退出..."; log_info "下次运行 bash claude-auto-loop/run.sh 即可恢复"; exit 130' INT TERM
+    # 信号处理：Ctrl+C / kill 时优雅退出（终止 claude 与思考提示后退出）
+    trap 'if [ -n "$THINKING_PID" ]; then kill $THINKING_PID 2>/dev/null; wait $THINKING_PID 2>/dev/null; fi; if [ -n "$CLAUDE_PID" ]; then kill -TERM $CLAUDE_PID 2>/dev/null; pkill -P $CLAUDE_PID -TERM 2>/dev/null; wait $CLAUDE_PID 2>/dev/null; fi; echo ""; log_warn "收到中断信号，正在安全退出..."; log_info "下次运行 bash claude-auto-loop/run.sh 即可恢复"; exit 130' INT TERM
 
     # 加载模型配置（如果存在）
     if [ -f "$SCRIPT_DIR/config.env" ]; then
@@ -328,9 +388,29 @@ main() {
         # 仅导出非空变量，避免覆盖已有环境
         [ -n "${ANTHROPIC_BASE_URL:-}" ] && export ANTHROPIC_BASE_URL
         [ -n "${ANTHROPIC_API_KEY:-}" ] && export ANTHROPIC_API_KEY
+        [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ] && export ANTHROPIC_AUTH_TOKEN
+        # GLM 旧配置可能无 ANTHROPIC_MODEL，默认 glm-4.7
+        if [ -n "${ANTHROPIC_BASE_URL:-}" ] && { [[ "${ANTHROPIC_BASE_URL}" == *"bigmodel.cn"* ]] || [[ "${ANTHROPIC_BASE_URL}" == *"z.ai"* ]]; }; then
+            [ -z "${ANTHROPIC_MODEL:-}" ] && ANTHROPIC_MODEL=glm-4.7
+        fi
+        [ -n "${ANTHROPIC_MODEL:-}" ] && export ANTHROPIC_MODEL
         [ -n "${API_TIMEOUT_MS:-}" ] && export API_TIMEOUT_MS
         [ -n "${MCP_TOOL_TIMEOUT:-}" ] && export MCP_TOOL_TIMEOUT
-        log_ok "模型配置已加载: ${MODEL_PROVIDER:-unknown}"
+        log_ok "模型配置已加载: ${MODEL_PROVIDER:-unknown}${ANTHROPIC_MODEL:+ ($ANTHROPIC_MODEL)}"
+        # CLAUDE_DEBUG 可随时在 config.env 中修改，无需重跑 setup
+        # 取值: verbose | mcp | api,mcp | api,hooks 等，空则不追加
+        if [ -n "${CLAUDE_DEBUG:-}" ]; then
+            if [ "$CLAUDE_DEBUG" = "verbose" ]; then
+                CLAUDE_EXTRA_FLAGS=(--verbose)
+            else
+                CLAUDE_EXTRA_FLAGS=(--debug "$CLAUDE_DEBUG")
+            fi
+            log_info "Claude 调试: ${CLAUDE_EXTRA_FLAGS[*]}"
+        else
+            CLAUDE_EXTRA_FLAGS=()
+        fi
+    else
+        CLAUDE_EXTRA_FLAGS=()
     fi
 
     check_prerequisites
@@ -385,6 +465,16 @@ main() {
         # 重试完仍然失败才退出
         if [ ! -f "$PROFILE" ] || [ ! -f "$TASKS_FILE" ]; then
             log_error "初始化失败：已重试 $init_max 次，关键文件仍未生成"
+            echo ""
+            echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+            echo -e "${YELLOW}  若出现 \"Credit balance is too low\"，说明 Claude API 额度不足${NC}"
+            echo -e "${YELLOW}  可运行 setup.sh 切换到 GLM 4.7 等替代模型：${NC}"
+            echo ""
+            echo -e "  ${GREEN}bash claude-auto-loop/setup.sh${NC}"
+            echo ""
+            echo -e "${YELLOW}  完成后重新运行 run.sh 即可${NC}"
+            echo -e "${YELLOW}═══════════════════════════════════════════════════════════════${NC}"
+            echo ""
             log_info "请检查 Agent 输出，手动排查问题后重新运行"
             exit 1
         fi
