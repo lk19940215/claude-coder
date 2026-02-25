@@ -27,7 +27,7 @@
 set -euo pipefail
 
 # ============ 配置 ============
-MAX_SESSIONS=30         # 最大会话数（安全上限）
+MAX_SESSIONS=50         # 最大会话数（安全上限）
 CLAUDE_PID=""            # 当前 claude 子进程 PID，供 trap 终止用
 THINKING_PID=""          # 思考中提示的 PID，供 trap 终止用
 MAX_RETRY=3              # 每个任务最大重试次数
@@ -228,6 +228,8 @@ has_code_files() {
 
 rollback_to() {
     local target_head="${1:-}"
+    local validate_log="${2:-}"  # New parameter: path to validation log
+
     [ -z "$target_head" ] && { log_error "rollback_to 需要 target_head 参数"; return 1; }
     log_warn "回滚到 $target_head ..."
     cd "$PROJECT_ROOT"
@@ -235,12 +237,22 @@ rollback_to() {
     log_ok "回滚完成"
 
     # 记录失败到 progress.txt
+    local error_reason="harness 校验失败"
+    if [ -n "$validate_log" ] && [ -f "$validate_log" ]; then
+        # Extract error from log (look for INVALID or ERROR)
+        local extracted
+        extracted=$(grep -E "INVALID:|ERROR" "$validate_log" | head -1 | sed 's/.*INVALID://;s/.*ERROR//' | sed 's/^[[:space:]]*//')
+        if [ -n "$extracted" ]; then
+            error_reason="校验失败: $extracted"
+        fi
+    fi
+
     local timestamp
     timestamp=$(date "+%Y-%m-%d %H:%M")
     if [ -f "$PROGRESS_FILE" ]; then
         echo "" >> "$PROGRESS_FILE"
         echo "=== FAILED SESSION | $timestamp ===" >> "$PROGRESS_FILE"
-        echo "- 结果：harness 校验失败，已自动回滚" >> "$PROGRESS_FILE"
+        echo "- 结果：$error_reason，已自动回滚" >> "$PROGRESS_FILE"
         echo "- 回滚到: $target_head" >> "$PROGRESS_FILE"
     fi
 }
@@ -269,7 +281,7 @@ run_scan() {
     # 使用 bypassPermissions 允许 Agent 无需交互确认即可创建/编辑文件
     # --settings 加载 PreToolUse hook，首次工具调用时写入 .phase="coding"，供进度指示器切换
     # CLAUDE_EXTRA_FLAGS 由 config.env 的 CLAUDE_DEBUG 控制，可输出 MCP/API 等调试日志
-    script -q /dev/null claude "${CLAUDE_MODEL_FLAGS[@]}" "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "
+    script -q "$LOG_DIR/scan_$(date +%s).log" claude "${CLAUDE_MODEL_FLAGS[@]}" "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "
 你是项目初始化 Agent。请严格按照 claude-auto-loop/CLAUDE.md 中的「项目扫描协议」执行。
 
 项目类型: $project_type
@@ -413,7 +425,8 @@ ${mcp_hint}}
 
     set +e
     # CLAUDE_EXTRA_FLAGS 由 config.env 的 CLAUDE_DEBUG 控制，可输出 MCP/API 等调试日志
-    script -q /dev/null claude "${CLAUDE_MODEL_FLAGS[@]}" "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "$coding_prompt" &
+    local session_log="$LOG_DIR/session_${session_num}_$(date +%s).log"
+    script -q "$session_log" claude "${CLAUDE_MODEL_FLAGS[@]}" "${CLAUDE_EXTRA_FLAGS[@]}" --permission-mode bypassPermissions --settings "$SCRIPT_DIR/hooks-settings.json" -p "$coding_prompt" &
     CLAUDE_PID=$!
     wait $CLAUDE_PID
     local claude_exit=$?
@@ -423,7 +436,7 @@ ${mcp_hint}}
     set -e
 
     if [ "${claude_exit:-0}" -ne 0 ]; then
-        log_warn "Claude Code 退出码: $claude_exit"
+        log_warn "Claude Code 退出码: $claude_exit (查看日志: $session_log)"
     fi
 
     return "${claude_exit:-0}"
@@ -436,6 +449,12 @@ main() {
     echo "  Claude Auto Loop"
     echo "============================================"
     echo ""
+
+    # ============ 日志配置 ============
+    LOG_DIR="$SCRIPT_DIR/logs"
+    mkdir -p "$LOG_DIR"
+    
+    # ... (rest of main function)
 
     # 信号处理：Ctrl+C / kill 时优雅退出（终止 claude 与思考提示后退出）
     trap 'if [ -n "$THINKING_PID" ]; then kill $THINKING_PID 2>/dev/null; wait $THINKING_PID 2>/dev/null; fi; if [ -n "$CLAUDE_PID" ]; then kill -TERM $CLAUDE_PID 2>/dev/null; pkill -P $CLAUDE_PID -TERM 2>/dev/null; wait $CLAUDE_PID 2>/dev/null; fi; echo ""; log_warn "收到中断信号，正在安全退出..."; log_info "下次运行 bash claude-auto-loop/run.sh 即可恢复"; exit 130' INT TERM
@@ -457,6 +476,30 @@ main() {
         [ -n "${ANTHROPIC_SMALL_FAST_MODEL:-}" ] && export ANTHROPIC_SMALL_FAST_MODEL
         [ -n "${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:-}" ] && export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
         [ -n "${CLAUDE_CODE_EFFORT_LEVEL:-}" ] && export CLAUDE_CODE_EFFORT_LEVEL
+        
+        # DeepSeek 智能映射策略：
+        # 如果 config.env 中配置了 deepseek-chat，我们在运行时将其强制替换为 claude-3-haiku-20240307
+        # 这样做的好处是：
+        # 1. 配置文件 clean (deepseek-chat)，用户易读
+        # 2. 运行时 effective (haiku shim)，确保禁用 thinking
+        if [ -n "${ANTHROPIC_BASE_URL:-}" ] && [[ "${ANTHROPIC_BASE_URL}" == *deepseek* ]]; then
+            # 仅针对 Chat 模式进行劫持
+            if [[ "${ANTHROPIC_MODEL:-}" == "deepseek-chat" ]]; then
+                export ANTHROPIC_MODEL="claude-3-haiku-20240307"
+                # 覆盖所有内部别名，彻底封死 Thinking 路径
+                export ANTHROPIC_DEFAULT_OPUS_MODEL="claude-3-haiku-20240307"
+                export ANTHROPIC_DEFAULT_SONNET_MODEL="claude-3-haiku-20240307"
+                export ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-3-haiku-20240307"
+                export ANTHROPIC_SMALL_FAST_MODEL="claude-3-haiku-20240307"
+                # 仍保留 budget=0 作为双重保险
+                export ANTHROPIC_THINKING_BUDGET=0
+            fi
+        fi
+
+        # 确保别名变量被 export，否则 claude 子进程无法读取，会回退到默认 Opus (开启 Thinking)
+        [ -n "${ANTHROPIC_DEFAULT_OPUS_MODEL:-}" ] && export ANTHROPIC_DEFAULT_OPUS_MODEL
+        [ -n "${ANTHROPIC_DEFAULT_SONNET_MODEL:-}" ] && export ANTHROPIC_DEFAULT_SONNET_MODEL
+        [ -n "${ANTHROPIC_DEFAULT_HAIKU_MODEL:-}" ] && export ANTHROPIC_DEFAULT_HAIKU_MODEL
         
         [ -n "${ANTHROPIC_THINKING_BUDGET:-}" ] && export ANTHROPIC_THINKING_BUDGET
         log_ok "模型配置已加载: ${MODEL_PROVIDER:-unknown}${ANTHROPIC_MODEL:+ ($ANTHROPIC_MODEL)}"
@@ -602,13 +645,27 @@ main() {
         log_info "开始 harness 校验 ..."
 
         set +e
-        bash "$VALIDATE_SH" "$head_before"
+        local validate_log="$LOG_DIR/validate_session_${session}.log"
+        bash "$VALIDATE_SH" "$head_before" > "$validate_log" 2>&1
         local validate_exit=$?
+        cat "$validate_log"  # 输出到控制台供用户查看
         set -e
 
         # ---------- 根据校验结果决定 ----------
         if [ $validate_exit -eq 0 ]; then
             log_ok "Session $session 校验通过"
+            
+            # 自动推送 (Auto Push)
+            # 仅当存在 remote 时尝试推送，忽略错误不中断循环
+            if git remote | grep -q .; then
+                log_info "正在推送代码..."
+                if git push; then
+                    log_ok "推送成功"
+                else
+                    log_warn "推送失败 (请检查网络或权限)，继续执行..."
+                fi
+            fi
+
             consecutive_failures=0
             rm -f "$SESSION_RESULT"
         else
@@ -616,7 +673,7 @@ main() {
             consecutive_failures=$((consecutive_failures + 1))
             log_error "Session $session 校验失败 (连续失败: $consecutive_failures/$MAX_RETRY)"
 
-            rollback_to "$head_before"
+            rollback_to "$head_before" "$validate_log"
 
             if [ $consecutive_failures -ge $MAX_RETRY ]; then
                 log_error "连续失败 $MAX_RETRY 次，跳过当前任务"

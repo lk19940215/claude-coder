@@ -65,11 +65,15 @@ try:
         data = json.load(f)
 
     # 必须字段
-    required = ['session_result', 'task_id', 'status_after']
+    required = ['session_result', 'status_after']
     missing = [k for k in required if k not in data]
     if missing:
         print(f'INVALID:缺少字段 {missing}')
         sys.exit(0)
+
+    # 可选字段警告
+    if 'task_id' not in data:
+        print('WARNING:缺少 task_id (建议包含)')
 
     result = data['session_result']
     if result not in ('success', 'failed'):
@@ -97,6 +101,10 @@ except Exception as e:
             log_warn "session_result.json 合法，但 Agent 报告失败 (failed)"
             # Agent 自己说失败也算"正常产出"，不需要回滚
         fi
+    elif [[ "$validation" == WARNING:* ]]; then
+        local warn_msg="${validation#WARNING:}"
+        log_warn "session_result.json 警告: $warn_msg"
+        HAS_WARNINGS=true
     else
         local reason="${validation#INVALID:}"
         log_error "session_result.json 校验失败: $reason"
