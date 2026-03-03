@@ -13,6 +13,5 @@ session_result.json
 sync_state.json
 requirements_hash.current
 
-
 # 自定义校验钩子目录（用户自行维护）
 validate.d/
