@@ -9,7 +9,7 @@ const { paths, log, getProjectRoot } = require('./config');
 function loadProfile() {
   const p = paths();
   if (!fs.existsSync(p.profile)) {
-    log('error', '未找到 project_profile.json，请先运行 auto-coder run 完成项目扫描');
+    log('error', '未找到 project_profile.json，请先运行 claude-coder run 完成项目扫描');
     process.exit(1);
   }
   return JSON.parse(fs.readFileSync(p.profile, 'utf8'));

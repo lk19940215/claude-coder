@@ -4,28 +4,28 @@
 const pkg = require('../package.json');
 
 const COMMANDS = {
-  run:      { desc: '自动编码循环',             usage: 'auto-coder run [需求] [--max N] [--pause N] [--dry-run]' },
-  setup:    { desc: '交互式模型配置',           usage: 'auto-coder setup' },
-  init:     { desc: '初始化项目环境',           usage: 'auto-coder init' },
-  view:     { desc: '观测模式（交互式单次）',   usage: 'auto-coder view [需求]' },
-  add:      { desc: '追加任务到 tasks.json',    usage: 'auto-coder add "指令"' },
-  validate: { desc: '手动校验上次 session',     usage: 'auto-coder validate' },
-  status:   { desc: '查看任务进度和成本',       usage: 'auto-coder status' },
-  config:   { desc: '配置管理',                 usage: 'auto-coder config sync' },
+  run:      { desc: '自动编码循环',             usage: 'claude-coder run [需求] [--max N] [--pause N] [--dry-run]' },
+  setup:    { desc: '交互式模型配置',           usage: 'claude-coder setup' },
+  init:     { desc: '初始化项目环境',           usage: 'claude-coder init' },
+  view:     { desc: '观测模式（交互式单次）',   usage: 'claude-coder view [需求]' },
+  add:      { desc: '追加任务到 tasks.json',    usage: 'claude-coder add "指令"' },
+  validate: { desc: '手动校验上次 session',     usage: 'claude-coder validate' },
+  status:   { desc: '查看任务进度和成本',       usage: 'claude-coder status' },
+  config:   { desc: '配置管理',                 usage: 'claude-coder config sync' },
 };
 
 function showHelp() {
-  console.log(`\nAuto Coder v${pkg.version}\n`);
-  console.log('用法: auto-coder <command> [options]\n');
+  console.log(`\nClaude Coder v${pkg.version}\n`);
+  console.log('用法: claude-coder <command> [options]\n');
   console.log('命令:');
   for (const [name, info] of Object.entries(COMMANDS)) {
     console.log(`  ${name.padEnd(10)} ${info.desc}`);
   }
   console.log('\n示例:');
-  console.log('  auto-coder setup                   配置模型和 API Key');
-  console.log('  auto-coder run "实现用户登录"       开始自动编码');
-  console.log('  auto-coder run --max 5 --dry-run   预览模式');
-  console.log('  auto-coder status                  查看进度和成本');
+  console.log('  claude-coder setup                   配置模型和 API Key');
+  console.log('  claude-coder run "实现用户登录"       开始自动编码');
+  console.log('  claude-coder run --max 5 --dry-run   预览模式');
+  console.log('  claude-coder status                  查看进度和成本');
   console.log(`\n前置条件: npm install -g @anthropic-ai/claude-agent-sdk`);
 }
 
@@ -98,7 +98,7 @@ async function main() {
     }
     case 'add': {
       if (!positional[0]) {
-        console.error('用法: auto-coder add "任务描述"');
+        console.error('用法: claude-coder add "任务描述"');
         process.exit(1);
       }
       const runner = require('../src/runner');
@@ -121,7 +121,7 @@ async function main() {
       if (positional[0] === 'sync') {
         config.syncToGlobal();
       } else {
-        console.error('用法: auto-coder config sync');
+        console.error('用法: claude-coder config sync');
         process.exit(1);
       }
       break;

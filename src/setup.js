@@ -59,16 +59,16 @@ function writeConfig(filePath, lines) {
 
 function ensureGitignore() {
   const gitignore = path.join(getProjectRoot(), '.gitignore');
-  const patterns = ['.auto-coder/.env', '.auto-coder/.runtime/'];
+  const patterns = ['.claude-coder/.env', '.claude-coder/.runtime/'];
   let content = '';
   if (fs.existsSync(gitignore)) {
     content = fs.readFileSync(gitignore, 'utf8');
   }
   const toAdd = patterns.filter(p => !content.includes(p));
   if (toAdd.length > 0) {
-    const block = '\n# Auto Coder（含 API Key 和临时文件）\n' + toAdd.join('\n') + '\n';
+    const block = '\n# Claude Coder（含 API Key 和临时文件）\n' + toAdd.join('\n') + '\n';
     fs.appendFileSync(gitignore, block, 'utf8');
-    log('info', '已将 .auto-coder/.env 添加到 .gitignore');
+    log('info', '已将 .claude-coder/.env 添加到 .gitignore');
   }
 }
 
@@ -86,7 +86,7 @@ async function setup() {
 
   console.log('');
   console.log('============================================');
-  console.log('  Auto Coder 前置配置');
+  console.log('  Claude Coder 前置配置');
   console.log('============================================');
   console.log('');
   console.log('  第一步: 模型提供商配置');
@@ -127,7 +127,7 @@ async function setup() {
   switch (choice) {
     case 1: {
       configLines = [
-        '# Auto Coder 模型配置',
+        '# Claude Coder 模型配置',
         '# 提供商: Claude 官方',
         '',
         'MODEL_PROVIDER=claude',
@@ -168,7 +168,7 @@ async function setup() {
       const apiKey = await askApiKey(rl, glmProvider, glmApiUrl, existingKey);
 
       configLines = [
-        '# Auto Coder 模型配置',
+        '# Claude Coder 模型配置',
         `# 提供商: GLM (${glmProvider})`,
         `# 模型: ${glmModel}`,
         '',
@@ -199,7 +199,7 @@ async function setup() {
       const apiKey = await askApiKey(rl, '阿里云百炼', 'https://bailian.console.aliyun.com/?tab=model#/api-key', existingKey);
 
       configLines = [
-        '# Auto Coder 模型配置',
+        '# Claude Coder 模型配置',
         '# 提供商: 阿里云 Coding Plan (百炼)',
         '# Opus: glm-5 | Sonnet/Haiku: qwen3-coder-plus | Fallback: qwen3.5-plus',
         '',
@@ -240,7 +240,7 @@ async function setup() {
       const dsModel = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-hybrid'][dsChoice - 1];
 
       configLines = [
-        '# Auto Coder 模型配置',
+        '# Claude Coder 模型配置',
         `# 提供商: DeepSeek`,
         `# 模型: ${dsModel} | API_TIMEOUT_MS=600000 防止长输出超时（10分钟）`,
         '',
@@ -298,7 +298,7 @@ async function setup() {
       const apiKey = await askApiKey(rl, '自定义平台', '', existingKey);
 
       configLines = [
-        '# Auto Coder 模型配置',
+        '# Claude Coder 模型配置',
         '# 提供商: 自定义',
         '',
         'MODEL_PROVIDER=custom',
@@ -376,9 +376,9 @@ async function setup() {
   log('ok', '配置完成！');
   console.log('');
   console.log(`  配置文件: ${p.envFile}`);
-  console.log('  使用方式: auto-coder run "你的需求"');
-  console.log('  详细需求: 创建 requirements.md 后运行 auto-coder run');
-  console.log('  重新配置: auto-coder setup');
+  console.log('  使用方式: claude-coder run "你的需求"');
+  console.log('  详细需求: 创建 requirements.md 后运行 claude-coder run');
+  console.log('  重新配置: claude-coder setup');
   console.log('');
 }
 

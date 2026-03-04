@@ -87,7 +87,7 @@ function showStatus() {
   const p = paths();
   const data = loadTasks();
   if (!data) {
-    log('warn', '未找到 .auto-coder/tasks.json，请先运行 auto-coder run');
+    log('warn', '未找到 .claude-coder/tasks.json，请先运行 claude-coder run');
     return;
   }
 

@@ -149,7 +149,7 @@ async function run(requirement, opts = {}) {
 
   console.log('');
   console.log('============================================');
-  console.log(`  Auto Coder${dryRun ? ' (预览模式)' : ''}`);
+  console.log(`  Claude Coder${dryRun ? ' (预览模式)' : ''}`);
   console.log('============================================');
   console.log('');
 
@@ -185,10 +185,10 @@ async function run(requirement, opts = {}) {
       console.log('');
       console.log('用法（二选一）:');
       console.log('  方式 1: 在项目根目录创建 requirements.md');
-      console.log('          auto-coder run');
+      console.log('          claude-coder run');
       console.log('');
       console.log('  方式 2: 直接传入一句话需求');
-      console.log('          auto-coder run "你的需求描述"');
+      console.log('          claude-coder run "你的需求描述"');
       process.exit(1);
     }
 
@@ -205,7 +205,7 @@ async function run(requirement, opts = {}) {
       console.log('');
       console.log(`${COLOR.yellow}═══════════════════════════════════════════════${COLOR.reset}`);
       console.log(`${COLOR.yellow}  若出现 "Credit balance is too low"，请运行:${COLOR.reset}`);
-      console.log(`  ${COLOR.green}auto-coder setup${COLOR.reset}`);
+      console.log(`  ${COLOR.green}claude-coder setup${COLOR.reset}`);
       console.log(`${COLOR.yellow}═══════════════════════════════════════════════${COLOR.reset}`);
       process.exit(1);
     }
@@ -337,7 +337,7 @@ async function add(instruction, opts = {}) {
   ensureLoopDir();
 
   if (!fs.existsSync(p.profile) || !fs.existsSync(p.tasksFile)) {
-    log('error', 'add 需要先完成初始化（至少运行一次 auto-coder run）');
+    log('error', 'add 需要先完成初始化（至少运行一次 claude-coder run）');
     process.exit(1);
   }
 

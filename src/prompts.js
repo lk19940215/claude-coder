@@ -55,7 +55,7 @@ function buildCodingPrompt(sessionNum, opts = {}) {
   // Hint 4: Environment readiness
   let envHint = '';
   if (consecutiveFailures === 0 && sessionNum > 1) {
-    envHint = '环境已就绪，第二步可跳过 auto-coder init，仅确认服务存活。涉及新依赖时仍需运行 auto-coder init。';
+    envHint = '环境已就绪，第二步可跳过 claude-coder init，仅确认服务存活。涉及新依赖时仍需运行 claude-coder init。';
   }
 
   // Hint 5: Existing test records
@@ -165,8 +165,8 @@ function buildAddPrompt(instruction) {
     '重要：这是任务追加 session，不是常规编码 session。不执行 6 步流程。',
     '',
     '步骤：',
-    '1. 读取 .auto-coder/tasks.json 了解已有任务和最大 id/priority',
-    '2. 读取 .auto-coder/project_profile.json 了解项目技术栈',
+    '1. 读取 .claude-coder/tasks.json 了解已有任务和最大 id/priority',
+    '2. 读取 .claude-coder/project_profile.json 了解项目技术栈',
     '3. 根据用户指令追加新任务（status: pending）',
     '',
     taskGuide,

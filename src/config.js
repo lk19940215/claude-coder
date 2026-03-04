@@ -27,7 +27,7 @@ function getProjectRoot() {
 }
 
 function getLoopDir() {
-  return path.join(getProjectRoot(), '.auto-coder');
+  return path.join(getProjectRoot(), '.claude-coder');
 }
 
 function ensureLoopDir() {

@@ -1,5 +1,5 @@
 <!-- 
-  Scan Protocol for Auto Coder.
+  Scan Protocol for Claude Coder.
   Only injected during scan sessions — not used in coding sessions.
   Contains: scan steps, project_profile.json format.
 -->
@@ -12,7 +12,7 @@
 
 检查项目根目录：
 - 如果存在代码文件（`.py`, `.js`, `.ts`, `package.json`, `requirements.txt` 等）→ **旧项目**（已有代码）
-- 如果根目录几乎为空（仅有 `.auto-coder/` 和少量文件）→ **新项目**（从零开始）
+- 如果根目录几乎为空（仅有 `.claude-coder/` 和少量文件）→ **新项目**（从零开始）
 
 ## 步骤 2A：旧项目 — 扫描现有代码，**优先整理文档**
 
@@ -34,7 +34,7 @@
 7. `.env` / `.env.example` → 环境变量配置
 8. 运行 `ls` 查看顶层目录结构
 
-根据扫描结果，生成 `.auto-coder/project_profile.json`（格式见下方）。若项目有自定义初始化步骤（如 `python manage.py migrate`），填充 `custom_init` 字段。`existing_docs` 须如实列出项目中**所有**可读文档路径（包括本次扫描中新生成的文档）。
+根据扫描结果，生成 `.claude-coder/project_profile.json`（格式见下方）。若项目有自定义初始化步骤（如 `python manage.py migrate`），填充 `custom_init` 字段。`existing_docs` 须如实列出项目中**所有**可读文档路径（包括本次扫描中新生成的文档）。
 
 ## 步骤 2B：新项目 — 脚手架搭建
 
@@ -53,7 +53,7 @@
 
 ## 步骤 4：收尾
 
-1. 写入 `.auto-coder/session_result.json`（notes 中记录初始化摘要）
+1. 写入 `.claude-coder/session_result.json`（notes 中记录初始化摘要）
 3. `git add -A && git commit -m "init: 项目扫描 + 任务分解"`
 
 ---
@@ -119,5 +119,5 @@
 - 字段值必须基于实际扫描结果，**禁止猜测**
 - 如果某个字段无法确定，使用 `"none"` 或空数组 `[]`
 - `services` 中的 `command` 必须来自实际的配置文件（package.json scripts、Procfile 等）或标准命令
-- `mcp_tools` 字段：检查 `.auto-coder/.env` 中的 `MCP_PLAYWRIGHT` 等变量。如果 `.env` 不存在，则全部设为 `false`
+- `mcp_tools` 字段：检查 `.claude-coder/.env` 中的 `MCP_PLAYWRIGHT` 等变量。如果 `.env` 不存在，则全部设为 `false`
 - `custom_init`：可选，数组格式。若项目需要额外的初始化命令（如数据库迁移、静态文件收集等），按执行顺序列出。无额外步骤则填 `[]` 或省略

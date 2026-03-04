@@ -4,13 +4,13 @@
 # Node
 node_modules/
 
-# Auto Coder 运行时（由 auto-coder 在用户项目中生成）
-.auto-coder/.env
-.auto-coder/.runtime/
-.auto-coder/project_profile.json
-.auto-coder/tasks.json
-.auto-coder/progress.json
-.auto-coder/session_result.json
-.auto-coder/sync_state.json
-.auto-coder/requirements_hash.current
-.auto-coder/tests.json
+# Claude Coder 运行时（由 claude-coder 在用户项目中生成）
+.claude-coder/.env
+.claude-coder/.runtime/
+.claude-coder/project_profile.json
+.claude-coder/tasks.json
+.claude-coder/progress.json
+.claude-coder/session_result.json
+.claude-coder/sync_state.json
+.claude-coder/requirements_hash.current
+.claude-coder/tests.json

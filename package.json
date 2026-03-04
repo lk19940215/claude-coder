@@ -1,9 +1,9 @@
 {
-  "name": "agent-coder",
+  "name": "claude-coder",
   "version": "1.0.0",
-  "description": "Agent Coder — Autonomous coding agent harness. Scan, plan, code, validate, git-commit in a loop. Works with Claude Code SDK.",
+  "description": "Claude Coder — Autonomous coding agent harness powered by Claude Code SDK. Scan, plan, code, validate, git-commit in a loop.",
   "bin": {
-    "auto-coder": "bin/cli.js"
+    "claude-coder": "bin/cli.js"
   },
   "files": [
     "bin/",
@@ -12,7 +12,7 @@
     "docs/"
   ],
   "keywords": [
-    "agent-coder",
+    "claude-coder",
     "claude",
     "claude-code",
     "ai",
@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lk19940215/auto-coder.git"
+    "url": "https://github.com/lk19940215/claude-coder.git"
   },
   "engines": {
     "node": ">=18.0.0"

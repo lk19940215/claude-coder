@@ -1,8 +1,8 @@
-# Auto Coder
+# Claude Coder
 
 **中文** | [English](docs/README.en.md)
 
-受 [Anthropic: Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) 启发，Auto Coder 是一个**自主编码 harness**，依托 Claude Agent SDK 的 `query()` 接口，提供项目扫描、任务分解、多 session 编排、自动校验与 git 回滚的能力，支持一句话需求或 `requirements.md` 驱动，兼容所有 Anthropic API 兼容的模型提供商。
+受 [Anthropic: Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) 启发，Claude Coder 是一个**自主编码 harness**，依托 Claude Agent SDK 的 `query()` 接口，提供项目扫描、任务分解、多 session 编排、自动校验与 git 回滚的能力，支持一句话需求或 `requirements.md` 驱动，兼容所有 Anthropic API 兼容的模型提供商。
 
 **核心思路**：AI Agent 单次会话上下文有限，大型需求容易丢失进度或产出不可用代码。本工具将 Agent 包装为一个**可靠的、可重试的函数** — harness 管理任务状态、校验每次产出、失败时自动回滚，Agent 只需专注于编码。
 
@@ -15,14 +15,14 @@
 npm install -g @anthropic-ai/claude-agent-sdk
 
 # 安装
-npm install -g agent-coder
+npm install -g claude-coder
 
 # 配置模型
-auto-coder setup
+claude-coder setup
 
 # 开始自动编码
 cd your-project
-auto-coder run "实现用户注册和登录功能"
+claude-coder run "实现用户注册和登录功能"
 ```
 
 ## 工作原理
@@ -48,27 +48,27 @@ auto-coder run "实现用户注册和登录功能"
 
 | 命令 | 说明 |
 |------|------|
-| `auto-coder setup` | 交互式模型配置 |
-| `auto-coder run [需求]` | 自动编码循环 |
-| `auto-coder run --dry-run` | 预览模式 |
-| `auto-coder init` | 初始化项目环境 |
-| `auto-coder view [需求]` | 观测模式（交互式单次） |
-| `auto-coder add "指令"` | 追加任务 |
-| `auto-coder validate` | 手动校验 |
-| `auto-coder status` | 查看进度和成本 |
-| `auto-coder config sync` | 同步配置到 ~/.claude/ |
+| `claude-coder setup` | 交互式模型配置 |
+| `claude-coder run [需求]` | 自动编码循环 |
+| `claude-coder run --dry-run` | 预览模式 |
+| `claude-coder init` | 初始化项目环境 |
+| `claude-coder view [需求]` | 观测模式（交互式单次） |
+| `claude-coder add "指令"` | 追加任务 |
+| `claude-coder validate` | 手动校验 |
+| `claude-coder status` | 查看进度和成本 |
+| `claude-coder config sync` | 同步配置到 ~/.claude/ |
 
 **选项**：`--max N` 限制 session 数（默认 50），`--pause N` 每 N 个 session 暂停（默认 5）。
 
 ## 使用场景
 
-**新项目**：`auto-coder run "用 Express + React 做 Todo 应用"` — 自动搭建脚手架、分解任务、逐个实现。
+**新项目**：`claude-coder run "用 Express + React 做 Todo 应用"` — 自动搭建脚手架、分解任务、逐个实现。
 
-**已有项目**：`auto-coder run "新增头像上传功能"` — 先扫描现有代码和技术栈，再增量开发。
+**已有项目**：`claude-coder run "新增头像上传功能"` — 先扫描现有代码和技术栈，再增量开发。
 
-**需求文档驱动**：在项目根目录创建 `requirements.md`（可从模板复制），运行 `auto-coder run` — 修改需求后再次运行，自动同步新任务。
+**需求文档驱动**：在项目根目录创建 `requirements.md`（可从模板复制），运行 `claude-coder run` — 修改需求后再次运行，自动同步新任务。
 
-**追加任务**：`auto-coder add "新增管理员后台"` — 仅追加到任务列表，下次 run 时执行。
+**追加任务**：`claude-coder add "新增管理员后台"` — 仅追加到任务列表，下次 run 时执行。
 
 ## 模型支持
 
@@ -84,7 +84,7 @@ auto-coder run "实现用户注册和登录功能"
 
 ```
 your-project/
-  .auto-coder/              # 运行时数据（gitignored）
+  .claude-coder/              # 运行时数据（gitignored）
     .env                    # 模型配置
     project_profile.json    # 项目扫描结果
     tasks.json              # 任务列表 + 状态
@@ -97,11 +97,11 @@ your-project/
 
 ## 常见问题
 
-**"Credit balance is too low"**：运行 `auto-coder setup` 重新配置 API Key。
+**"Credit balance is too low"**：运行 `claude-coder setup` 重新配置 API Key。
 
-**中断恢复**：直接重新运行 `auto-coder run`，会从上次中断处继续。
+**中断恢复**：直接重新运行 `claude-coder run`，会从上次中断处继续。
 
-**跳过任务**：将 `.auto-coder/tasks.json` 中该任务的 `status` 改为 `done`。
+**跳过任务**：将 `.claude-coder/tasks.json` 中该任务的 `status` 改为 `done`。
 
 **Windows 支持**：完全支持，纯 Node.js 实现。
 

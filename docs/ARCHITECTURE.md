@@ -1,4 +1,4 @@
-# Auto Coder — 技术架构文档
+# Claude Coder — 技术架构文档
 
 > 本文件面向开发者和 AI，用于快速理解本工具的设计、文件结构、提示语架构和扩展方向。
 
@@ -27,7 +27,7 @@ flowchart TB
         hook_sys["PreToolUse hook<br/>内联回调"]
     end
 
-    subgraph Files["文件系统 (.auto-coder/)"]
+    subgraph Files["文件系统 (.claude-coder/)"]
         direction TB
         profile["project_profile.json<br/>tasks.json"]
         runtime["session_result.json<br/>progress.json"]
@@ -58,7 +58,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    start(["auto-coder run ..."]) --> mode{模式?}
+    start(["claude-coder run ..."]) --> mode{模式?}
 
     mode -->|view| view["runViewSession()"]
     view --> exit_view([exit 0])
@@ -135,11 +135,11 @@ templates/
 | `templates/CLAUDE.md` | Agent 协议 |
 | `templates/SCAN_PROTOCOL.md` | 首次扫描协议 |
 
-### 用户项目运行时数据（.auto-coder/）
+### 用户项目运行时数据（.claude-coder/）
 
 | 文件 | 生成时机 | 用途 |
 |------|----------|------|
-| `.env` | `auto-coder setup` | 模型配置 + API Key（gitignored） |
+| `.env` | `claude-coder setup` | 模型配置 + API Key（gitignored） |
 | `project_profile.json` | 首次扫描 | 项目元数据 |
 | `tasks.json` | 首次扫描 | 任务列表 + 状态跟踪 |
 | `progress.json` | 每次 session 结束 | 结构化会话日志 + 成本记录 |
@@ -190,8 +190,8 @@ flowchart TB
 |---|---|---|---|
 | **编码** | CLAUDE.md | `buildCodingPrompt()` + 6 个条件 hint | 主循环每次迭代 |
 | **扫描** | CLAUDE.md + SCAN_PROTOCOL.md | `buildScanPrompt()` + 任务分解指导 | 首次运行 |
-| **观测** | CLAUDE.md (± SCAN_PROTOCOL.md) | `buildViewPrompt()` | `auto-coder view` |
-| **追加** | CLAUDE.md | `buildAddPrompt()` + 任务分解指导 | `auto-coder add` |
+| **观测** | CLAUDE.md (± SCAN_PROTOCOL.md) | `buildViewPrompt()` | `claude-coder view` |
+| **追加** | CLAUDE.md | `buildAddPrompt()` + 任务分解指导 | `claude-coder add` |
 
 ### 编码 Session 的 6 个条件 Hint
 
@@ -301,7 +301,7 @@ sequenceDiagram
 
 | 方向 | 说明 |
 |------|------|
-| **Web UI 监控** | 可选插件包 `@auto-coder/web-ui` |
+| **Web UI 监控** | 可选插件包 `@claude-coder/web-ui` |
 | **PR/CI 集成** | Session 完成后自动创建 PR、监控 CI |
 | **Prompt A/B 测试** | 多版本 CLAUDE.md 并行对比效果 |
 | **并行 Worktree** | 多任务在不同 git worktree 中并行执行 |
@@ -315,5 +315,5 @@ sequenceDiagram
 3. **Agent 自治**：Agent 通过 CLAUDE.md 协议自主决策，harness 只负责调度和校验
 4. **幂等设计**：所有入口可重复执行，不产生副作用
 5. **跨平台**：纯 Node.js + `child_process` 调用 git，无平台特定脚本
-6. **运行时隔离**：每个项目的 `.auto-coder/` 独立，不同项目互不干扰
+6. **运行时隔离**：每个项目的 `.claude-coder/` 独立，不同项目互不干扰
 7. **Prompt 架构分离**：静态规则在 `templates/`，动态上下文在 `src/prompts.js`

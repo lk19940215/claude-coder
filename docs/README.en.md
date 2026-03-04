@@ -1,8 +1,8 @@
-# Auto Coder
+# Claude Coder
 
 [中文](../README.md) | **English**
 
-Inspired by [Anthropic: Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents), Auto Coder is an **autonomous coding harness** built on the Claude Agent SDK's `query()` interface. It provides project scanning, task decomposition, multi-session orchestration, automatic validation, and git rollback — driven by a one-liner requirement or a `requirements.md` file, compatible with all Anthropic API-compatible model providers.
+Inspired by [Anthropic: Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents), Claude Coder is an **autonomous coding harness** built on the Claude Agent SDK's `query()` interface. It provides project scanning, task decomposition, multi-session orchestration, automatic validation, and git rollback — driven by a one-liner requirement or a `requirements.md` file, compatible with all Anthropic API-compatible model providers.
 
 **Core idea**: A single AI session has limited context. For large requirements, agents tend to lose progress or produce broken code. This tool wraps the agent in a **reliable, retryable function** — the harness manages task state, validates every output, and auto-rolls back on failure. The agent just focuses on coding.
 
@@ -15,14 +15,14 @@ Inspired by [Anthropic: Effective harnesses for long-running agents](https://www
 npm install -g @anthropic-ai/claude-agent-sdk
 
 # Install
-npm install -g agent-coder
+npm install -g claude-coder
 
 # Configure model
-auto-coder setup
+claude-coder setup
 
 # Start auto-coding
 cd your-project
-auto-coder run "Implement user registration and login"
+claude-coder run "Implement user registration and login"
 ```
 
 ## How It Works
@@ -48,15 +48,15 @@ Each session, the agent autonomously follows 6 steps: restore context → env ch
 
 | Command | Description |
 |---------|-------------|
-| `auto-coder setup` | Interactive model configuration |
-| `auto-coder run [requirement]` | Auto-coding loop |
-| `auto-coder run --dry-run` | Preview mode |
-| `auto-coder init` | Initialize project environment |
-| `auto-coder view [requirement]` | Observation mode (single session) |
-| `auto-coder add "instruction"` | Append tasks |
-| `auto-coder validate` | Manually validate last session |
-| `auto-coder status` | View progress and costs |
-| `auto-coder config sync` | Sync config to ~/.claude/ |
+| `claude-coder setup` | Interactive model configuration |
+| `claude-coder run [requirement]` | Auto-coding loop |
+| `claude-coder run --dry-run` | Preview mode |
+| `claude-coder init` | Initialize project environment |
+| `claude-coder view [requirement]` | Observation mode (single session) |
+| `claude-coder add "instruction"` | Append tasks |
+| `claude-coder validate` | Manually validate last session |
+| `claude-coder status` | View progress and costs |
+| `claude-coder config sync` | Sync config to ~/.claude/ |
 
 **Options**: `--max N` limit sessions (default 50), `--pause N` pause every N sessions (default 5).
 
@@ -74,7 +74,7 @@ Each session, the agent autonomously follows 6 steps: restore context → env ch
 
 ```
 your-project/
-  .auto-coder/              # Runtime data (gitignored)
+  .claude-coder/              # Runtime data (gitignored)
     .env                    # Model config
     project_profile.json    # Project scan results
     tasks.json              # Task list + status

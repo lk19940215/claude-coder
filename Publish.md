@@ -67,13 +67,13 @@ npm link
 
 # 在测试项目中验证
 cd /tmp && mkdir test-project && cd test-project
-auto-coder --help        # 应显示帮助信息
-auto-coder --version     # 应显示版本号
-auto-coder setup         # 应进入交互式配置
-auto-coder status        # 应提示未初始化
+claude-coder --help        # 应显示帮助信息
+claude-coder --version     # 应显示版本号
+claude-coder setup         # 应进入交互式配置
+claude-coder status        # 应提示未初始化
 
 # 清理
-npm unlink -g agent-coder
+npm unlink -g claude-coder
 rm -rf /tmp/test-project
 ```
 
@@ -91,11 +91,11 @@ npm version patch && npm publish
 
 ```bash
 # 等待几分钟后
-npm info agent-coder
+npm info claude-coder
 
 # 全局安装测试
-npm install -g agent-coder
-auto-coder --version
+npm install -g claude-coder
+claude-coder --version
 ```
 
 ## 发布检查清单
@@ -104,17 +104,17 @@ auto-coder --version
 - [ ] `package.json` 的 `author` 和 `repository` 正确
 - [ ] `npm pack --dry-run` 只包含必要文件
 - [ ] 所有 `.js` 文件语法检查通过
-- [ ] `auto-coder --help` 正常显示
-- [ ] `auto-coder setup` 交互式配置正常
-- [ ] `auto-coder status` 正常运行（无 crash）
+- [ ] `claude-coder --help` 正常显示
+- [ ] `claude-coder setup` 交互式配置正常
+- [ ] `claude-coder status` 正常运行（无 crash）
 - [ ] README.md 和 docs/README.en.md 内容最新
 - [ ] git 已提交并推送
 
 ## 包结构
 
 ```
-auto-coder/
-  package.json          # name: "agent-coder", bin: "auto-coder"
+claude-coder/
+  package.json          # name: "claude-coder", bin: "claude-coder"
   README.md             # npm 页面展示的主文档
   bin/
     cli.js              # CLI 入口（#!/usr/bin/env node）
@@ -148,7 +148,7 @@ auto-coder/
 用户安装流程：
 ```bash
 npm install -g @anthropic-ai/claude-agent-sdk  # 前置
-npm install -g agent-coder                # 本包
+npm install -g claude-coder                # 本包
 ```
 
 ## 版本策略

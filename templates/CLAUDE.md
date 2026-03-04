@@ -1,5 +1,5 @@
 <!-- 
-  This file is the Agent Protocol for Auto Coder.
+  This file is the Agent Protocol for Claude Coder.
   It is injected as the system prompt via the SDK at the start of each session.
   The instructions are written in Chinese, which Claude handles natively.
 
@@ -34,7 +34,7 @@
 
 ## 项目上下文
 
-读取 `.auto-coder/project_profile.json` 获取项目信息。
+读取 `.claude-coder/project_profile.json` 获取项目信息。
 该文件包含项目名称、技术栈、服务启动命令、健康检查 URL 等。
 
 **如果该文件不存在，说明需要执行项目扫描（扫描协议由 harness 在首次运行时通过 SCAN_PROTOCOL.md 注入）。**
@@ -45,12 +45,12 @@
 |---|---|---|
 | `CLAUDE.md` | 本文件，你的全局指令 | 只读，不得修改 |
 | `requirements.md` | **用户的需求文档（用户输入，禁止修改）** | **只读，绝对不得修改、删除或重写** |
-| `.auto-coder/project_profile.json` | 项目元数据（技术栈、服务、初始化命令等） | 首次扫描时创建，之后只读 |
-| `.auto-coder/tasks.json` | 功能任务列表，带状态跟踪 | 只能修改 `status` 字段 |
-| `.auto-coder/progress.json` | 跨会话记忆日志（外部循环自动维护） | 只读 |
-| `.auto-coder/session_result.json` | 本次会话的结构化输出 | 每次会话结束时覆盖写入 |
-| `.auto-coder/sync_state.json` | 需求同步状态（外部循环 session 成功后自动更新） | Agent 无需读写 |
-| `.auto-coder/tests.json` | 功能验证记录（轻量） | 可新增和更新；仅当功能涉及 API 或核心逻辑时记录 |
+| `.claude-coder/project_profile.json` | 项目元数据（技术栈、服务、初始化命令等） | 首次扫描时创建，之后只读 |
+| `.claude-coder/tasks.json` | 功能任务列表，带状态跟踪 | 只能修改 `status` 字段 |
+| `.claude-coder/progress.json` | 跨会话记忆日志（外部循环自动维护） | 只读 |
+| `.claude-coder/session_result.json` | 本次会话的结构化输出 | 每次会话结束时覆盖写入 |
+| `.claude-coder/sync_state.json` | 需求同步状态（外部循环 session 成功后自动更新） | Agent 无需读写 |
+| `.claude-coder/tests.json` | 功能验证记录（轻量） | 可新增和更新；仅当功能涉及 API 或核心逻辑时记录 |
 
 ### requirements.md 处理原则
 
@@ -175,15 +175,15 @@ pending ──→ in_progress ──→ testing ──→ done
 
 ### 第一步：恢复上下文
 
-1. 批量读取以下文件（一次工具调用）：`.auto-coder/project_profile.json`、`.auto-coder/tasks.json`、`.auto-coder/session_result.json`
+1. 批量读取以下文件（一次工具调用）：`.claude-coder/project_profile.json`、`.claude-coder/tasks.json`、`.claude-coder/session_result.json`
 2. 如果 `session_result.json` 不存在或 history 为空，运行 `git log --oneline -20` 补充上下文
 3. 如果项目根目录存在 `requirements.md`，读取用户的详细需求和偏好（技术约束、样式要求等），作为本次会话的参考依据
 4. **需求同步（条件触发）**：如果 prompt 中提示"需求已变更"，读取 `requirements.md`，对比 `tasks.json`，将新增需求追加为 `pending` 任务。未提示则跳过
 
 ### 第二步：环境与健康检查
 
-1. **首次 session 或上次失败**：运行 `auto-coder init`（在终端执行此 CLI 命令）确保开发环境就绪（幂等设计，已安装的依赖和已运行的服务会自动跳过）
-2. **连续成功后的 session**：如果 prompt 提示环境已就绪，跳过 init，仅快速确认服务存活（`curl -s health_check_url`）。若本次任务涉及新依赖，仍需运行 `auto-coder init`
+1. **首次 session 或上次失败**：运行 `claude-coder init`（在终端执行此 CLI 命令）确保开发环境就绪（幂等设计，已安装的依赖和已运行的服务会自动跳过）
+2. **连续成功后的 session**：如果 prompt 提示环境已就绪，跳过 init，仅快速确认服务存活（`curl -s health_check_url`）。若本次任务涉及新依赖，仍需运行 `claude-coder init`
 3. **纯文档 / 纯配置任务**：可跳过整个第二步
 4. 如果发现已有 Bug，**先修复再开发新功能**
 
