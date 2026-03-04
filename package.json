@@ -1,0 +1,42 @@
+{
+  "name": "auto-coder",
+  "version": "1.0.0",
+  "description": "Auto Coder — Autonomous coding agent harness. Scan, plan, code, validate, git-commit in a loop. Works with Claude Code SDK.",
+  "bin": {
+    "auto-coder": "bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "templates/",
+    "docs/"
+  ],
+  "keywords": [
+    "auto-coder",
+    "claude",
+    "claude-code",
+    "ai",
+    "agent",
+    "autonomous",
+    "automation",
+    "coding",
+    "harness",
+    "loop",
+    "agent-harness",
+    "task-decomposition",
+    "code-generation"
+  ],
+  "author": "lk19940215",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lk19940215/auto-coder.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/claude-agent-sdk": ">=0.14.0"
+  },
+  "dependencies": {}
+}

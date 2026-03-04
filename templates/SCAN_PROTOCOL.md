@@ -1,7 +1,7 @@
 <!-- 
-  Scan Protocol for Claude Auto Loop.
-  Only injected during run_scan() — not used in coding sessions.
-  Contains: scan steps, project_profile.json format, init.sh generation rules.
+  Scan Protocol for Auto Coder.
+  Only injected during scan sessions — not used in coding sessions.
+  Contains: scan steps, project_profile.json format.
 -->
 
 # 项目扫描协议（首次运行时执行）
@@ -12,7 +12,7 @@
 
 检查项目根目录：
 - 如果存在代码文件（`.py`, `.js`, `.ts`, `package.json`, `requirements.txt` 等）→ **旧项目**（已有代码）
-- 如果根目录几乎为空（仅有 `claude-auto-loop/` 和少量文件）→ **新项目**（从零开始）
+- 如果根目录几乎为空（仅有 `.auto-coder/` 和少量文件）→ **新项目**（从零开始）
 
 ## 步骤 2A：旧项目 — 扫描现有代码，**优先整理文档**
 
@@ -25,11 +25,11 @@
 3. `Cargo.toml` → Rust，`go.mod` → Go，`pom.xml` / `build.gradle` → Java
 4. `docker-compose.yml` / `Dockerfile` → 容器化配置，提取服务定义
 5. `Makefile` → 构建方式
-6. `README.md` / `docs/` → 现有文档（若缺失或过简，**先整理再扫描**；在 progress.txt 中记录文档状态）
+6. `README.md` / `docs/` → 现有文档（若缺失或过简，**先整理再扫描**；在 session_result.json 的 notes 中记录文档状态）
 7. `.env` / `.env.example` → 环境变量配置
 8. 运行 `ls` 查看顶层目录结构
 
-根据扫描结果，生成 `project_profile.json`（格式见下方）和 `init.sh`（规则见下方）。`existing_docs` 须如实列出项目中**所有**可读文档路径。
+根据扫描结果，生成 `.auto-coder/project_profile.json`（格式见下方）。若项目有自定义初始化步骤（如 `python manage.py migrate`），填充 `custom_init` 字段。`existing_docs` 须如实列出项目中**所有**可读文档路径。
 
 ## 步骤 2B：新项目 — 脚手架搭建
 
@@ -38,18 +38,16 @@
 3. 创建项目目录结构和基础文件（入口文件、配置文件、依赖文件等）
 4. 生成 `README.md`，说明项目用途和技术栈
 5. 初始化包管理（`npm init` / `pip freeze` 等）
-6. 完成后，执行**步骤 2A 的扫描流程**生成 `project_profile.json` 和 `init.sh`
+6. 完成后，执行**步骤 2A 的扫描流程**生成 `project_profile.json`
 
 ## 步骤 3：生成 tasks.json
 
-根据用户需求（优先参考 `requirements.md`，其次参考 harness 传入的需求文本），将功能分解为具体任务（格式见 CLAUDE.md 中的 tasks.json 章节）。如果 `requirements.md` 中有明确的功能列表，按其内容拆分；如果只有模糊描述，自行合理拆分。
-
-**重要：避免任务与脚手架重叠**。步骤 2B 中已创建的代码（目录结构、入口文件、配置文件、依赖文件、README）不应重复出现在 tasks.json 中。tasks.json 的第一个任务应从脚手架之后的「第一个有业务逻辑的功能」开始。infra 类任务（如 Docker 配置、CI/CD）应合并为尽量少的条目。
+根据用户需求和 user prompt 中的「任务分解指导」，将功能分解为任务。
+格式参见 CLAUDE.md 中的 tasks.json 章节。
 
 ## 步骤 4：收尾
 
-1. 创建 `progress.txt`，记录初始化摘要
-2. 写入 `session_result.json`
+1. 写入 `.auto-coder/session_result.json`（notes 中记录初始化摘要）
 3. `git add -A && git commit -m "init: 项目扫描 + 任务分解"`
 
 ---
@@ -102,6 +100,7 @@
   "mcp_tools": {
     "playwright": false
   },
+  "custom_init": ["python manage.py migrate"],
   "scan_files_checked": [
     "package.json", "pyproject.toml", "requirements.txt",
     "Dockerfile", "docker-compose.yml", "Makefile", "README.md"
@@ -114,23 +113,5 @@
 - 字段值必须基于实际扫描结果，**禁止猜测**
 - 如果某个字段无法确定，使用 `"none"` 或空数组 `[]`
 - `services` 中的 `command` 必须来自实际的配置文件（package.json scripts、Procfile 等）或标准命令
-- `mcp_tools` 字段：检查 `claude-auto-loop/config.env` 中的 `MCP_PLAYWRIGHT` 等变量。如果 `config.env` 不存在，则全部设为 `false`
-
----
-
-## init.sh 生成规则
-
-扫描完成后，基于 `project_profile.json` 生成 `init.sh`，遵循以下规则：
-
-1. **文件头部**：包含 `#!/bin/bash`、`set -e`、脚本说明
-2. **环境激活**：
-   - 如果 `env_setup.python_env` 以 `conda:` 开头 → 生成 conda activate 逻辑（需 source conda.sh）
-   - 如果 `env_setup.python_env` 是 `venv` → 生成 `source .venv/bin/activate`
-   - 如果 `env_setup.node_version` 不是 `none` → 生成 nvm use 逻辑
-3. **服务启动**：对 `services` 数组中的每个服务：
-   - 先用 `lsof -i :端口`（macOS/Linux）或 `netstat -ano | findstr :端口`（Windows）检查是否已运行
-   - 未运行则 `nohup 命令 > /tmp/日志文件 2>&1 &`
-   - 等待健康检查通过（最多 10 秒）
-4. **幂等设计**：已运行的服务必须跳过，不能重复启动
-5. **服务生命周期**：init.sh 只负责启动服务。服务的停止由 Agent 在第六步收尾时执行（根据 CLAUDE.md 规范，session 结束前必须 kill 本次启动的后台进程，避免端口冲突和文件锁）
-6. **末尾输出**：打印所有服务的 URL
+- `mcp_tools` 字段：检查 `.auto-coder/.env` 中的 `MCP_PLAYWRIGHT` 等变量。如果 `.env` 不存在，则全部设为 `false`
+- `custom_init`：可选，数组格式。若项目需要额外的初始化命令（如数据库迁移、静态文件收集等），按执行顺序列出。无额外步骤则填 `[]` 或省略

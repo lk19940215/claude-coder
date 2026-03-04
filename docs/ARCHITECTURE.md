@@ -1,87 +1,82 @@
-# Claude Auto Loop — 架构概述
+# Auto Coder — 技术架构文档
 
-> 本文件面向 AI Agent 和开发者，用于快速理解本工具的设计、文件结构和扩展方式。
-> 修改工具前请先阅读本文件。
+> 本文件面向开发者和 AI，用于快速理解本工具的设计、文件结构、提示语架构和扩展方向。
 
-## 定位
+---
 
-一个 **通用的 Claude Code 自动编码 harness**。它将 Claude Code CLI 包装为一个循环引擎：自动扫描项目 → 拆解任务 → 逐个实现 → 校验 → 推送，无需人工干预（可在暂停点确认）。
+## 一句话定位
 
-核心特征：
-- **项目无关**：所有项目信息由 Agent 扫描后存入 `project_profile.json`，工具本身不含任何项目特定逻辑
-- **可恢复**：通过 `progress.txt` 跨会话记忆，任意 session 可断点续跑
-- **可观测**：通过 PreToolUse hook 实时显示 Agent 当前步骤和最近工具调用
+一个基于 Claude Agent SDK 的**自主编码 harness**：自动扫描项目 → 拆解任务 → 逐个实现 → 校验 → 回滚/重试 → 推送，全程无需人工干预。
 
-## 整体架构
+---
+
+## 1. 核心架构
 
 ```mermaid
 flowchart TB
-    subgraph Harness["run.sh (Harness 主控)"]
+    subgraph Harness["bin/cli.js → src/runner.js (Harness 主控)"]
         direction TB
-        scan["run_scan()<br/>首次扫描"]
-        coding["run_coding_session()<br/>编码循环"]
-        validate["validate.sh<br/>校验"]
-        indicator["start_thinking_indicator()<br/>每15秒轮询状态文件"]
+        scan["scanner.scan()<br/>首次扫描"]
+        coding["session.runCodingSession()<br/>编码循环"]
+        validate["validator.validate()<br/>校验"]
+        indicator["Indicator 类<br/>setInterval 500ms 刷新"]
     end
 
-    subgraph Claude["Claude Code CLI"]
-        agent["Agent<br/>(遵循 CLAUDE.md 协议)"]
-        hook_sys["Hooks 系统<br/>PreToolUse 事件"]
+    subgraph SDK["Claude Agent SDK"]
+        query["query() 函数"]
+        hook_sys["PreToolUse hook<br/>内联回调"]
     end
 
-    subgraph Files["文件系统"]
+    subgraph Files["文件系统 (.auto-coder/)"]
         direction TB
-        profile["project_profile.json<br/>init.sh<br/>tasks.json"]
-        runtime["session_result.json<br/>progress.txt"]
-        phase[".phase / .phase_step<br/>.activity_log"]
+        profile["project_profile.json<br/>tasks.json"]
+        runtime["session_result.json<br/>progress.json"]
+        phase[".runtime/<br/>phase / step / activity.log"]
     end
 
-    subgraph Hook["hooks/phase-signal.py"]
-        infer["步骤推断<br/>1~6步"]
-        activity["活动日志<br/>工具摘要"]
-    end
+    scan -->|"systemPrompt =<br/>CLAUDE.md + SCAN_PROTOCOL.md"| query
+    coding -->|"systemPrompt = CLAUDE.md"| query
 
-    scan -->|"--append-system-prompt-file<br/>CLAUDE.md + SCAN_PROTOCOL.md"| agent
-    coding -->|"--append-system-prompt-file<br/>CLAUDE.md"| agent
-    coding -->|"--settings<br/>hooks-settings.json"| hook_sys
+    query -->|PreToolUse 事件| hook_sys
+    hook_sys -->|inferPhaseStep()| indicator
 
-    agent -->|生成| profile
-    agent -->|写入| runtime
-
-    hook_sys -->|"stdin JSON<br/>{tool_name, tool_input}"| Hook
-    infer -->|写入| phase
-    activity -->|追加| phase
-
-    indicator -->|"读取"| phase
-    indicator -->|"终端输出"| terminal["终端显示<br/>[INFO] AI 编码中 · 步骤4 · Edit src/app.tsx"]
-
+    query -->|Agent 工具调用| Files
     validate -->|读取| runtime
-    validate -->|"pass → 下一session<br/>fail → rollback"| coding
+    validate -->|"pass → 下一 session<br/>fail → rollback"| coding
 ```
 
-## 执行流程
+**核心特征：**
+- **项目无关**：项目信息由 Agent 扫描后存入 `project_profile.json`，harness 不含项目特定逻辑
+- **可恢复**：通过 `session_result.json` 跨会话记忆，任意 session 可断点续跑
+- **可观测**：SDK 内联 `PreToolUse` hook 实时显示 Agent 当前步骤和工具调用
+- **跨平台**：纯 Node.js 实现，macOS / Linux / Windows 通用
+- **零依赖**：`dependencies` 为空，Claude Agent SDK 作为 peerDependency
+
+---
+
+## 2. 执行流程
 
 ```mermaid
 flowchart LR
-    start(["bash run.sh ..."]) --> mode{模式?}
+    start(["auto-coder run ..."]) --> mode{模式?}
 
-    mode -->|"--view"| view["run_view_session()<br/>交互式 session"]
+    mode -->|view| view["runViewSession()"]
     view --> exit_view([exit 0])
 
-    mode -->|"--add 指令"| add["run_add_tasks()<br/>读上下文 + 追加 tasks.json"]
+    mode -->|"add 指令"| add["runAddSession()"]
     add --> exit_add([exit 0])
 
-    mode -->|默认| check{profile<br/>存在?}
+    mode -->|run| check{profile<br/>存在?}
 
     check -->|否| req["读取<br/>requirements.md"]
-    req --> scan["run_scan()"]
-    scan --> profile_out["生成<br/>profile + init.sh + tasks.json"]
+    req --> scan["scanner.scan()"]
+    scan --> profile_out["生成<br/>profile + tasks.json"]
     profile_out --> loop
 
     check -->|是| loop
 
-    loop["编码循环"] --> session["run_coding_session(N)"]
-    session --> val["validate.sh"]
+    loop["编码循环"] --> session["runCodingSession(N)"]
+    session --> val["validator.validate()"]
     val -->|pass| push["git push"]
     push --> done_check{所有任务<br/>done?}
     done_check -->|否| pause_check{每N个session<br/>暂停?}
@@ -95,154 +90,228 @@ flowchart LR
     mark_failed --> session
 ```
 
-## Hook 数据流（每次工具调用）
+---
 
-```mermaid
-sequenceDiagram
-    participant CC as Claude Code
-    participant Hook as phase-signal.py
-    participant FS as 文件系统
-    participant Ind as run.sh indicator
+## 3. 模块职责
 
-    CC->>Hook: PreToolUse stdin JSON<br/>{tool_name: "Edit", tool_input: {path: "src/app.tsx"}, cwd: "/project"}
-
-    Hook->>Hook: _extract_summary()<br/>→ "src/app.tsx"
-    Hook->>FS: 追加 .activity_log<br/>"16:05:01|Edit|src/app.tsx"
-
-    Hook->>Hook: 步骤推断<br/>Edit + /src/ → "4-增量实现"
-    Hook->>FS: 写入 .phase_step<br/>"4-增量实现"
-    Hook->>FS: 写入 .phase<br/>"coding"
-
-    Note over CC,Hook: async=true, 不阻塞 Agent
-
-    loop 每 15 秒
-        Ind->>FS: 读取 .phase, .phase_step, .activity_log
-        Ind->>Ind: 拼接输出
-        Ind-->>Ind: [INFO] AI 编码中 · 步骤4-增量实现 · Edit src/app.tsx 16:05:01
-    end
+```
+bin/cli.js          CLI 入口：参数解析、命令路由、SDK peerDep 检查
+src/
+  config.js         配置管理：.env 加载、模型映射、环境变量构建、全局同步
+  runner.js         主循环：scan → session → validate → retry/rollback
+  session.js        SDK 交互：query() 调用、hook 绑定、日志流
+  prompts.js        提示语构建：系统 prompt 组合 + 条件 hint + 任务分解指导
+  init.js           环境初始化：读取 profile 执行依赖安装、服务启动、健康检查
+  scanner.js        初始化扫描：调用 runScanSession + 重试
+  validator.js      校验引擎：session_result 结构校验 + git 检查 + 测试覆盖
+  tasks.js          任务管理：CRUD + 状态机 + 进度展示
+  indicator.js      进度指示：终端 spinner + phase/step 文件写入
+  setup.js          交互式配置：模型选择、API Key、MCP 工具
+templates/
+  CLAUDE.md         Agent 协议（注入为 systemPrompt）
+  SCAN_PROTOCOL.md  首次扫描协议（与 CLAUDE.md 拼接注入）
+  requirements.example.md  需求文件模板
 ```
 
-## Agent 6 步工作流（单个 Session 内部）
+---
 
-```mermaid
-flowchart TB
-    s1["Step 1: 恢复上下文<br/>读取 progress.txt + tasks.json + profile"]
-    s2["Step 2: 环境检查<br/>运行 init.sh + 健康检查"]
-    s3["Step 3: 选择任务<br/>优先 failed → 其次 pending"]
-    s4["Step 4: 增量实现<br/>按 steps 逐步编码"]
-    s5["Step 5: 测试验证<br/>curl / Playwright / 选择性回归"]
-    s6["Step 6: 收尾<br/>git commit + progress.txt + session_result.json"]
+## 4. 文件清单
 
-    s1 --> s2 --> s3 --> s4 --> s5 --> s6
-
-    s5 -->|测试通过| done["status → done"]
-    s5 -->|测试失败| failed["status → failed"]
-    done --> s6
-    failed --> s6
-```
-
-## 任务状态机
-
-```mermaid
-stateDiagram-v2
-    [*] --> pending
-    pending --> in_progress: 开始工作
-    in_progress --> testing: 代码写完
-    testing --> done: 测试通过
-    testing --> failed: 测试失败
-    failed --> in_progress: 重试修复
-```
-
-## 文件清单
-
-### 工具核心（随 upstream 分发，update.sh 会覆盖）
+### npm 包分发内容
 
 | 文件 | 用途 |
 |------|------|
-| `CLAUDE.md` | Agent 协议：铁律、6 步流程、状态机、文件权限（注入为 system prompt） |
-| `docs/SCAN_PROTOCOL.md` | 首次扫描专用协议（与 CLAUDE.md 拼接后注入） |
-| `ARCHITECTURE.md` | 本文件：工具架构概述 |
-| `run.sh` | Harness 主控：扫描、编码循环、进度指示、错误回滚 |
-| `setup.sh` | 交互式配置向导：模型选择、MCP、API Key |
-| `validate.sh` | 独立校验脚本：session_result、git、健康检查、自定义钩子 |
-| `update.sh` | 从 upstream 拉取最新代码（排除法，自动同步新增文件） |
-| `hooks-settings.json` | Claude Code hooks 配置（PreToolUse 事件注册） |
-| `hooks/phase-signal.py` | PreToolUse hook：步骤推断 + 活动日志写入 |
-| `cursor.mdc` | Cursor IDE 规则文件（复制到 `.cursor/rules/`） |
-| `docs/requirements.example.md` | 需求文件模板 |
-| `README.md` / `docs/README.en.md` | 用户文档 |
-| `.gitignore` | 排除运行时文件 |
+| `bin/cli.js` | CLI 入口 |
+| `src/config.js` | .env 加载、模型映射 |
+| `src/runner.js` | Harness 主循环 |
+| `src/session.js` | SDK query() 封装 + hook |
+| `src/prompts.js` | 提示语构建（系统 prompt + 条件 hint + 任务分解指导） |
+| `src/init.js` | 环境初始化（依赖安装、服务启动） |
+| `src/scanner.js` | 项目初始化扫描 |
+| `src/validator.js` | 校验引擎 |
+| `src/tasks.js` | 任务 CRUD + 状态机 |
+| `src/indicator.js` | 终端进度指示器 |
+| `src/setup.js` | 交互式配置向导 |
+| `templates/CLAUDE.md` | Agent 协议 |
+| `templates/SCAN_PROTOCOL.md` | 首次扫描协议 |
 
-### 项目运行时数据（由 Agent 生成，update.sh 不覆盖）
+### 用户项目运行时数据（.auto-coder/）
 
 | 文件 | 生成时机 | 用途 |
 |------|----------|------|
-| `project_profile.json` | 首次扫描 | 项目元数据：技术栈、服务、健康检查 URL |
-| `init.sh` | 首次扫描 | 环境初始化脚本（幂等设计） |
-| `tasks.json` | 首次扫描 | 功能任务列表 + 状态跟踪 |
-| `progress.txt` | 每次 session 结束 | 跨会话记忆日志（只追加） |
-| `session_result.json` | 每次 session 结束 | 本次会话的结构化输出 |
-| `tests.json` | 首次测试时（Agent 自动创建） | 测试用例注册表（选择性回归） |
-| `sync_state.json` | 需求同步时 | 需求 hash 同步状态 |
-| `config.env` | setup.sh 生成 | 模型配置 + API Key（gitignored） |
+| `.env` | `auto-coder setup` | 模型配置 + API Key（gitignored） |
+| `project_profile.json` | 首次扫描 | 项目元数据 |
+| `tasks.json` | 首次扫描 | 任务列表 + 状态跟踪 |
+| `progress.json` | 每次 session 结束 | 结构化会话日志 + 成本记录 |
+| `session_result.json` | 每次 session 结束 | 当前 + 历史 session 结果 |
+| `tests.json` | 首次测试时 | 验证记录（防止反复测试） |
+| `.runtime/` | 运行时 | 临时文件（phase、step、activity.log、logs/） |
 
-### 运行时临时文件（session 生命周期，自动清理）
+---
 
-| 文件 | 写入者 | 读取者 | 用途 |
-|------|--------|--------|------|
-| `.phase` | `phase-signal.py` | `run.sh` indicator | 当前阶段：thinking / coding |
-| `.phase_step` | `phase-signal.py` | `run.sh` indicator | 当前步骤：1-恢复上下文 ~ 6-收尾 |
-| `.activity_log` | `phase-signal.py` | `run.sh` indicator | 最近工具调用摘要（滚动日志） |
-| `requirements_hash.current` | `run.sh` | Agent | 需求同步触发条件 |
-| `logs/*.log` | `run.sh` | 开发者 | session 和校验日志 |
+## 5. Prompt 注入架构
 
-## Hook 系统
+### 架构图
 
-Claude Code 的 hooks 是 **进程外设计**（不是 in-process callback）。Hook handler 是独立进程，通过 stdin 接收 JSON，通过 stdout/exit code 返回结果。
+```mermaid
+flowchart TB
+    subgraph Templates["templates/ (静态模板)"]
+        claude_md["CLAUDE.md<br/>Agent 协议 ~255 行"]
+        scan_md["SCAN_PROTOCOL.md<br/>扫描协议 ~133 行"]
+    end
 
-### 配置
+    subgraph Prompts["src/prompts.js (动态构建)"]
+        sys_p["buildSystemPrompt()<br/>组合系统提示"]
+        coding_p["buildCodingPrompt()<br/>编码 session prompt"]
+        task_g["buildTaskGuide()<br/>任务分解指导"]
+        scan_p["buildScanPrompt()<br/>扫描 session prompt"]
+        view_p["buildViewPrompt()"]
+        add_p["buildAddPrompt()"]
+    end
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "matcher": "*",
-      "hooks": [{
-        "type": "command",
-        "command": "\"$CLAUDE_PROJECT_DIR\"/claude-auto-loop/hooks/phase-signal.py",
-        "async": true
-      }]
-    }]
-  }
-}
+    subgraph Session["src/session.js (SDK 调用)"]
+        query["SDK query()<br/>systemPrompt + prompt"]
+    end
+
+    claude_md --> sys_p
+    scan_md --> sys_p
+    sys_p --> query
+    coding_p --> query
+    task_g --> scan_p
+    task_g --> add_p
+    scan_p --> query
+    view_p --> query
+    add_p --> query
 ```
 
-注入方式：`run.sh` 通过 `--settings hooks-settings.json` 传递给 `claude` CLI。
+### Session 类型与注入内容
 
-### 可用的 hook 事件（Claude Code 原生支持）
+| Session 类型 | systemPrompt | user prompt | 触发条件 |
+|---|---|---|---|
+| **编码** | CLAUDE.md | `buildCodingPrompt()` + 5 个条件 hint | 主循环每次迭代 |
+| **扫描** | CLAUDE.md + SCAN_PROTOCOL.md | `buildScanPrompt()` + 任务分解指导 | 首次运行 |
+| **观测** | CLAUDE.md (± SCAN_PROTOCOL.md) | `buildViewPrompt()` | `auto-coder view` |
+| **追加** | CLAUDE.md | `buildAddPrompt()` + 任务分解指导 | `auto-coder add` |
 
-| 事件 | 触发时机 | 本工具是否使用 |
-|------|----------|----------------|
-| `PreToolUse` | 工具调用前 | **是**（步骤推断 + 活动日志） |
-| `PostToolUse` | 工具调用成功后 | 否（PreToolUse 已足够） |
-| `SessionStart/End` | 会话开始/结束 | 否 |
-| `Stop` | Claude 停止响应 | 否 |
-| `Notification` | 通知事件 | 否 |
+### 编码 Session 的 5 个条件 Hint
 
-## 扩展点
+| Hint | 触发条件 | 影响 |
+|---|---|---|
+| `reqSyncHint` | 需求 hash 变化 | Step 1：追加新任务 |
+| `mcpHint` | MCP_PLAYWRIGHT=true | Step 5：可用 Playwright |
+| `testHint` | tests.json 有记录 | Step 5：避免重复验证 |
+| `envHint` | 连续成功且 session>1 | Step 2：跳过 init |
+| `retryContext` | 上次校验失败 | 全局：避免同样错误 |
 
-| 扩展需求 | 方式 |
-|----------|------|
-| 增加校验逻辑 | 在 `validate.d/` 放 `.sh` 脚本，validate.sh 自动加载 |
-| 增加 hook 事件 | 修改 `hooks-settings.json`，在 `hooks/` 新增脚本 |
-| 支持新模型 | 修改 `setup.sh` 添加提供商 |
-| 定制 Agent 行为 | 修改 `CLAUDE.md`（但用户项目不应修改，由 upstream 维护） |
+---
+
+## 6. 注意力机制与设计决策
+
+### U 型注意力优化
+
+CLAUDE.md 的内容按 LLM 注意力 U 型曲线排列：
+
+```
+顶部 (primacy zone)    → 铁律（约束规则）      → 最高遵循率
+中部 (低注意力区)      → 参考数据（文件格式等） → 按需查阅
+底部 (recency zone)    → 6 步工作流（行动指令） → 最高行为合规率
+```
+
+### 关键设计决策
+
+| 决策 | 理由 |
+|------|------|
+| **静态规则 vs 动态上下文分离** | CLAUDE.md 是"宪法"（低频修改），hints 依赖运行时状态（动态生成） |
+| **扫描协议单独文件** | 仅首次注入，编码 session 不需要，节省 ~2000 token |
+| **任务分解指导在 user prompt** | 从系统 prompt 中部（低注意力）迁移到 user prompt（recency zone），提升遵循率 |
+| **tests.json 保留 last_run_session** | Agent 判断是否需要重新验证的依据（代码可能在中间 session 被修改） |
+| **prompts.js 集中管理** | 所有 prompt 文本一处可见，与 session.js 的 SDK 交互职责分离 |
+
+### 学术依据
+
+| 优化项 | 理论来源 |
+|---|---|
+| U 型注意力布局 | Anthropic Context Engineering |
+| DAG 依赖约束 | ACONIC (2025, arXiv 2510.07772) |
+| 反面案例排除 | SCoT (2023) + Expert Context Framework |
+| scan/add 复用 taskGuide | User Story Decomposition (SSRN 2025) |
+
+---
+
+## 7. Hook 数据流
+
+SDK 的 hooks 是**进程内回调**（非独立进程），零延迟、无 I/O 开销：
+
+```mermaid
+sequenceDiagram
+    participant SDK as Claude Agent SDK
+    participant Hook as inferPhaseStep()
+    participant Ind as Indicator (setInterval)
+    participant Term as 终端
+
+    SDK->>Hook: PreToolUse 回调<br/>{tool_name: "Edit", tool_input: {path: "src/app.tsx"}}
+    Hook->>Hook: 推断阶段: Edit → coding
+    Hook->>Ind: updatePhase("coding")
+    Hook->>Ind: appendActivity("Edit", "src/app.tsx")
+
+    Note over SDK,Hook: 同步回调，return {decision: "allow"}
+
+    loop 每 500ms
+        Ind->>Term: ⠋ [Session 3] 编码中 02:15 | Git 操作
+    end
+```
+
+---
+
+## 8. 评分
+
+| 维度 | 评分 | 说明 |
+|------|------|------|
+| **CLAUDE.md 系统提示** | 8/10 | U 型注意力设计；铁律清晰；状态机和 6 步流程是核心竞争力 |
+| **动态 prompt** | 8/10 | 5 个条件 hint 精准注入，不浪费 token |
+| **SCAN_PROTOCOL.md** | 8.5/10 | 新旧项目分支完整，profile 格式全面 |
+| **tests.json 设计** | 7.5/10 | 精简字段，核心目的（防反复测试）明确 |
+| **注入时机** | 9/10 | 静态规则 vs 动态上下文分离干净 |
+| **整体架构** | 8/10 | 文件组织清晰，prompts.js 分离提升可维护性 |
+
+---
+
+## 9. 后续优化方向
+
+### P0 — 近期
+
+| 方向 | 说明 |
+|------|------|
+| **文件保护 Deny-list** | PreToolUse hook 拦截对保护文件的写入（比文字规则更硬性） |
+| **TUI 终端监控** | 基于 ANSI 的全屏界面，替代单行 spinner |
+| **成本预算控制** | `.env` 新增 `MAX_COST_USD`，超预算自动停止 |
+
+### P1 — 中期
+
+| 方向 | 说明 |
+|------|------|
+| **TCR 纪律** | Test && Commit \|\| Revert，可配置 strict/smart/off |
+| **配置分层** | defaults.env → .env → .env.local 三层合并 |
+| **Reminders 注入** | 用户自定义提醒文件，拼接到编码 prompt |
+| **MCP 工具自动检测** | `claude mcp list` 自动启用已安装工具 |
+
+### P2 — 远期
+
+| 方向 | 说明 |
+|------|------|
+| **Web UI 监控** | 可选插件包 `@auto-coder/web-ui` |
+| **PR/CI 集成** | Session 完成后自动创建 PR、监控 CI |
+| **Prompt A/B 测试** | 多版本 CLAUDE.md 并行对比效果 |
+| **并行 Worktree** | 多任务在不同 git worktree 中并行执行 |
+
+---
 
 ## 设计原则
 
-1. **工具与项目分离**：`claude-auto-loop/` 是独立子目录，不污染项目结构
-2. **排除法优于包含法**：`update.sh` 和 `.gitignore` 定义"要保护什么"而非"要包含什么"
+1. **SDK 原生集成**：通过 `query()` 调用 Claude，内联 hooks，原生 cost tracking
+2. **零硬依赖**：Claude Agent SDK 作为 peerDependency
 3. **Agent 自治**：Agent 通过 CLAUDE.md 协议自主决策，harness 只负责调度和校验
-4. **幂等设计**：`init.sh`、`run.sh` 可重复执行，不产生副作用
-5. **最小依赖**：仅需 `claude` CLI + Python 3 + `git`，无 Node/jq 等额外依赖
-6. **跨平台**：macOS/Linux 用 `.sh`，Windows 提供 `.bat` 包装脚本自动调用 Git Bash
+4. **幂等设计**：所有入口可重复执行，不产生副作用
+5. **跨平台**：纯 Node.js + `child_process` 调用 git，无平台特定脚本
+6. **运行时隔离**：每个项目的 `.auto-coder/` 独立，不同项目互不干扰
+7. **Prompt 架构分离**：静态规则在 `templates/`，动态上下文在 `src/prompts.js`

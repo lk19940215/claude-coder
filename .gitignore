@@ -1,26 +1,16 @@
 # macOS
 .DS_Store
 
-# 模型配置（含 API Key，由 setup.sh 生成）
-config.env
+# Node
+node_modules/
 
-# 运行时生成文件（项目特定，不随工具分发）
-project_profile.json
-init.sh
-tasks.json
-progress.txt
-session_result.json
-sync_state.json
-requirements_hash.current
-
-# 运行时临时文件（由 hooks/phase-signal.py 和 run.sh 写入）
-.phase
-.phase_step
-.activity_log
-logs/
-
-# 测试注册表（运行时生成）
-tests.json
-
-# 自定义校验钩子目录（用户自行维护）
-validate.d/
+# Auto Coder 运行时（由 auto-coder 在用户项目中生成）
+.auto-coder/.env
+.auto-coder/.runtime/
+.auto-coder/project_profile.json
+.auto-coder/tasks.json
+.auto-coder/progress.json
+.auto-coder/session_result.json
+.auto-coder/sync_state.json
+.auto-coder/requirements_hash.current
+.auto-coder/tests.json
