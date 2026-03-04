@@ -4,16 +4,6 @@ const fs = require('fs');
 const { execSync } = require('child_process');
 const { paths, log, getProjectRoot } = require('./config');
 
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return JSON.parse(
-      text.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'")
-    );
-  }
-}
-
 function validateSessionResult() {
   const p = paths();
 
@@ -24,10 +14,10 @@ function validateSessionResult() {
 
   let data;
   try {
-    data = safeJsonParse(fs.readFileSync(p.sessionResult, 'utf8'));
-  } catch {
-    log('error', 'session_result.json JSON 格式错误');
-    return { valid: false, fatal: true, reason: 'JSON 格式错误' };
+    data = JSON.parse(fs.readFileSync(p.sessionResult, 'utf8'));
+  } catch (err) {
+    log('error', `session_result.json 解析失败: ${err.message}`);
+    return { valid: false, fatal: true, reason: `JSON 解析失败: ${err.message}` };
   }
 
   const sr = data.current || data;
@@ -96,9 +86,9 @@ function checkTestCoverage() {
   if (!fs.existsSync(p.testsFile) || !fs.existsSync(p.sessionResult)) return;
 
   try {
-    const sr = safeJsonParse(fs.readFileSync(p.sessionResult, 'utf8'));
+    const sr = JSON.parse(fs.readFileSync(p.sessionResult, 'utf8'));
     const current = sr.current || sr;
-    const tests = safeJsonParse(fs.readFileSync(p.testsFile, 'utf8'));
+    const tests = JSON.parse(fs.readFileSync(p.testsFile, 'utf8'));
 
     const taskId = current.task_id || '';
     const testCases = tests.test_cases || [];

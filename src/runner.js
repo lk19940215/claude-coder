@@ -102,7 +102,7 @@ function appendProgress(entry) {
   if (fs.existsSync(p.progressFile)) {
     try {
       const text = fs.readFileSync(p.progressFile, 'utf8');
-      try { progress = JSON.parse(text); } catch { progress = JSON.parse(text.replace(/[\u201c\u201d]/g, '"')); }
+      progress = JSON.parse(text);
     } catch { /* reset */ }
   }
   if (!Array.isArray(progress.sessions)) progress.sessions = [];
@@ -116,7 +116,7 @@ function updateSessionHistory(sessionData, sessionNum) {
   if (fs.existsSync(p.sessionResult)) {
     try {
       const text = fs.readFileSync(p.sessionResult, 'utf8');
-      try { sr = JSON.parse(text); } catch { sr = JSON.parse(text.replace(/[\u201c\u201d]/g, '"')); }
+      sr = JSON.parse(text);
     } catch { /* reset */ }
     if (!sr.history && sr.session_result) {
       sr = { current: sr, history: [] };
@@ -246,6 +246,12 @@ async function run(requirement, opts = {}) {
     console.log('--------------------------------------------');
     log('info', `Session ${session} / ${maxSessions}`);
     console.log('--------------------------------------------');
+
+    const taskData = loadTasks();
+    if (!taskData) {
+      log('error', 'tasks.json 无法读取，终止循环');
+      break;
+    }
 
     if (allTasksDone()) {
       console.log('');

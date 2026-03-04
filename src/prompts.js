@@ -4,16 +4,6 @@ const fs = require('fs');
 const { paths, loadConfig, getRequirementsHash } = require('./config');
 const { loadTasks, findNextTask, getStats } = require('./tasks');
 
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return JSON.parse(
-      text.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'")
-    );
-  }
-}
-
 /**
  * Build system prompt by combining template files.
  * @param {boolean} includeScanProtocol - Whether to append SCAN_PROTOCOL.md
@@ -118,7 +108,7 @@ function buildCodingPrompt(sessionNum, opts = {}) {
   let memoryHint = '';
   if (fs.existsSync(p.sessionResult)) {
     try {
-      const sr = safeJsonParse(fs.readFileSync(p.sessionResult, 'utf8'));
+      const sr = JSON.parse(fs.readFileSync(p.sessionResult, 'utf8'));
       const last = sr.current || (sr.history?.length ? sr.history[sr.history.length - 1] : null);
       if (last?.task_id) {
         memoryHint = `上次会话: ${last.task_id} → ${last.status_after || last.session_result}` +

@@ -13,20 +13,15 @@ const TRANSITIONS = {
   done:        [],
 };
 
-function safeJsonParse(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return JSON.parse(
-      text.replace(/[\u201c\u201d]/g, '"').replace(/[\u2018\u2019]/g, "'")
-    );
-  }
-}
-
 function loadTasks() {
   const p = paths();
   if (!fs.existsSync(p.tasksFile)) return null;
-  return safeJsonParse(fs.readFileSync(p.tasksFile, 'utf8'));
+  try {
+    return JSON.parse(fs.readFileSync(p.tasksFile, 'utf8'));
+  } catch (err) {
+    log('error', `tasks.json 解析失败: ${err.message}`);
+    return null;
+  }
 }
 
 function saveTasks(data) {
