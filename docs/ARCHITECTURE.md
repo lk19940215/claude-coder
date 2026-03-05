@@ -183,11 +183,11 @@ flowchart TB
 
 | Session 类型 | systemPrompt | user prompt | 触发条件 |
 |---|---|---|---|
-| **编码** | CLAUDE.md | `buildCodingPrompt()` + 9 个条件 hint | 主循环每次迭代 |
+| **编码** | CLAUDE.md | `buildCodingPrompt()` + 10 个条件 hint | 主循环每次迭代 |
 | **扫描** | CLAUDE.md + SCAN_PROTOCOL.md | `buildScanPrompt()` + 任务分解指导 + profile 质量要求 | 首次运行 |
 | **追加** | CLAUDE.md | `buildAddPrompt()` + 任务分解指导 | `claude-coder add` |
 
-### 编码 Session 的 9 个条件 Hint
+### 编码 Session 的 10 个条件 Hint
 
 | # | Hint | 触发条件 | 影响 |
 |---|---|---|---|
@@ -196,7 +196,8 @@ flowchart TB
 | 3 | `envHint` | 连续成功且 session>1 | Step 2：跳过 init |
 | 4 | `testHint` | tests.json 有记录 | Step 5：避免重复验证 |
 | 5 | `docsHint` | profile.existing_docs 非空或 profile 有缺陷 | Step 4：读文档后再编码；profile 缺陷时提示 Agent 在 Step 6 补全 services/docs |
-| 6 | `taskHint` | tasks.json 存在且有待办任务 | Step 1：跳过读取 tasks.json，harness 已注入当前任务上下文 + .claude-coder/ 路径提示 |
+| 6 | `taskHint` | tasks.json 存在且有待办任务 | Step 1：跳过读取 tasks.json，harness 已注入当前任务上下文 + 项目绝对路径 |
+| 6b | `testEnvHint` | .claude-coder/test.env 存在 | Step 5：提示 Agent 在测试前加载测试环境变量 |
 | 7 | `memoryHint` | session_result.json 存在（扁平格式） | Step 1：跳过读取 session_result.json，harness 已注入上次会话摘要 |
 | 8 | `serviceHint` | 始终注入 | Step 6：单次模式停止服务，连续模式保持服务运行 |
 | 9 | `toolGuidance` | 始终注入 | 全局：工具使用规范（Grep/Glob/Read/LS/MultiEdit/Task 替代 bash 命令），非 Claude 模型必需 |
@@ -267,7 +268,7 @@ sequenceDiagram
 | 维度 | 评分 | 说明 |
 |------|------|------|
 | **CLAUDE.md 系统提示** | 8/10 | U 型注意力设计；铁律清晰；状态机和 6 步流程是核心竞争力 |
-| **动态 prompt** | 9/10 | 9 个条件 hint 精准注入，含 task/memory 上下文注入 + 服务管理 + 工具使用指导，减少 Agent 冗余操作 |
+| **动态 prompt** | 9/10 | 10 个条件 hint 精准注入，含 task/memory 上下文注入 + cwd 路径 + test.env + 服务管理 + 工具使用指导，减少 Agent 冗余操作 |
 | **SCAN_PROTOCOL.md** | 8.5/10 | 新旧项目分支完整，profile 格式全面 |
 | **tests.json 设计** | 7.5/10 | 精简字段，核心目的（防反复测试）明确 |
 | **注入时机** | 9/10 | 静态规则 vs 动态上下文分离干净 |

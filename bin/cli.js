@@ -7,7 +7,7 @@ const COMMANDS = {
   run:      { desc: '自动编码循环',             usage: 'claude-coder run [需求] [--max N] [--pause N] [--dry-run]' },
   setup:    { desc: '交互式模型配置',           usage: 'claude-coder setup' },
   init:     { desc: '初始化项目环境',           usage: 'claude-coder init' },
-  add:      { desc: '追加任务到 tasks.json',    usage: 'claude-coder add "指令" | add -r [file]' },
+  add:      { desc: '追加任务到 tasks.json',    usage: 'claude-coder add "指令" [--model M] | add -r [file]' },
   validate: { desc: '手动校验上次 session',     usage: 'claude-coder validate' },
   status:   { desc: '查看任务进度和成本',       usage: 'claude-coder status' },
   config:   { desc: '配置管理',                 usage: 'claude-coder config sync' },
@@ -28,6 +28,7 @@ function showHelp() {
   console.log('  claude-coder run --dry-run            预览模式');
   console.log('  claude-coder add "新增搜索功能"       追加任务');
   console.log('  claude-coder add -r                   从 requirements.md 追加任务');
+  console.log('  claude-coder add "..." --model opus-4 指定模型追加任务');
   console.log('  claude-coder status                  查看进度和成本');
   console.log(`\n前置条件: npm install -g @anthropic-ai/claude-agent-sdk`);
 }
@@ -35,7 +36,7 @@ function showHelp() {
 function parseArgs(argv) {
   const args = argv.slice(2);
   const command = args[0];
-  const opts = { max: 50, pause: 0, dryRun: false, readFile: null };
+  const opts = { max: 50, pause: 0, dryRun: false, readFile: null, model: null };
   const positional = [];
 
   for (let i = 1; i < args.length; i++) {
@@ -48,6 +49,9 @@ function parseArgs(argv) {
         break;
       case '--dry-run':
         opts.dryRun = true;
+        break;
+      case '--model':
+        opts.model = args[++i] || null;
         break;
       case '-r': {
         const next = args[i + 1];

@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const { paths, loadConfig } = require('./config');
+const { paths, loadConfig, getProjectRoot } = require('./config');
 const { loadTasks, findNextTask, getStats } = require('./tasks');
 
 /**
@@ -74,6 +74,7 @@ function buildCodingPrompt(sessionNum, opts = {}) {
   // Hint 6: Task context (harness pre-read, saves Agent 2-3 Read calls)
   let taskHint = '';
   try {
+    const projectRoot = getProjectRoot();
     const taskData = loadTasks();
     if (taskData) {
       const next = findNextTask(taskData);
@@ -82,11 +83,18 @@ function buildCodingPrompt(sessionNum, opts = {}) {
         taskHint = `任务上下文: ${next.id} "${next.description}" (${next.status}), ` +
           `category=${next.category}, steps=${next.steps.length}步。` +
           `进度: ${stats.done}/${stats.total} done, ${stats.failed} failed。` +
-          `运行时目录: .claude-coder/（隐藏目录，ls -a 可见，所有 tasks.json/profile 等文件均在此目录下）。` +
+          `项目绝对路径: ${projectRoot}。运行时目录: ${projectRoot}/.claude-coder/（隐藏目录）。` +
           `第一步无需读取 tasks.json（已注入），直接确认任务后进入 Step 2。`;
       }
     }
   } catch { /* ignore */ }
+
+  // Hint 6b: Test environment variables
+  let testEnvHint = '';
+  const testEnvFile = paths().testEnvFile;
+  if (testEnvFile && fs.existsSync(testEnvFile)) {
+    testEnvHint = '测试环境变量在 .claude-coder/test.env（含 API Key 等），测试前用 source .claude-coder/test.env 或 export 加载。';
+  }
 
   // Hint 7: Session memory (read flat session_result.json)
   let memoryHint = '';
@@ -127,6 +135,7 @@ function buildCodingPrompt(sessionNum, opts = {}) {
     docsHint,
     envHint,
     taskHint,
+    testEnvHint,
     memoryHint,
     serviceHint,
     toolGuidance,

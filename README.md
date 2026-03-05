@@ -53,8 +53,9 @@ claude-coder run "实现用户注册和登录功能"
 | `claude-coder run --max 1` | 单次执行 |
 | `claude-coder run --dry-run` | 预览模式 |
 | `claude-coder init` | 初始化项目环境 |
-| `claude-coder add "指令"` | 追加任务 |
+| `claude-coder add "指令"` | 追加任务（默认用 opus 级模型推理） |
 | `claude-coder add -r [file]` | 从需求文件追加任务 |
+| `claude-coder add "..." --model M` | 指定模型追加任务 |
 | `claude-coder validate` | 手动校验 |
 | `claude-coder status` | 查看进度和成本 |
 | `claude-coder config sync` | 同步配置到 ~/.claude/ |
@@ -92,7 +93,8 @@ your-project/
     session_result.json     # 上次 session 结果（扁平）
     progress.json           # 会话历史 + 成本
     tests.json              # 验证记录
-    .runtime/               # 临时文件
+    test.env                # 测试凭证（API Key 等，可选）
+    .runtime/               # 临时文件（含日志）
   requirements.md           # 需求文档（可选）
 ```
 
@@ -109,6 +111,7 @@ your-project/
 ## 文档
 
 - [技术架构](docs/ARCHITECTURE.md) — 模块职责、提示语注入架构、注意力机制、Hook 数据流、后续优化方向
+- [Playwright 凭证持久化](docs/PLAYWRIGHT_CREDENTIALS.md) — 测试 cookies 和 API Key 管理方案
 
 ## License
 

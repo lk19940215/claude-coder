@@ -53,8 +53,9 @@ Each session, the agent autonomously follows 6 steps: restore context → env ch
 | `claude-coder run --max 1` | Single session (replaces old view mode) |
 | `claude-coder run --dry-run` | Preview mode |
 | `claude-coder init` | Initialize project environment |
-| `claude-coder add "instruction"` | Append tasks |
+| `claude-coder add "instruction"` | Append tasks (defaults to opus-class model) |
 | `claude-coder add -r [file]` | Append tasks from requirements file |
+| `claude-coder add "..." --model M` | Append tasks with specific model |
 | `claude-coder validate` | Manually validate last session |
 | `claude-coder status` | View progress and costs |
 | `claude-coder config sync` | Sync config to ~/.claude/ |
@@ -82,13 +83,15 @@ your-project/
     session_result.json     # Last session result (flat)
     progress.json           # Session history + costs
     tests.json              # Verification records
-    .runtime/               # Temp files
+    test.env                # Test credentials (API keys, optional)
+    .runtime/               # Temp files (logs)
   requirements.md           # Requirements (optional)
 ```
 
 ## Documentation
 
 - [Architecture](ARCHITECTURE.md) — Module responsibilities, prompt injection architecture, attention mechanism, hook data flow, future roadmap
+- [Playwright Credentials](PLAYWRIGHT_CREDENTIALS.md) — Test cookies and API key management
 
 ## License
 

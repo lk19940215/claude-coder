@@ -55,6 +55,7 @@ function paths() {
     sessionResult:    path.join(loopDir, 'session_result.json'),
     profile:          path.join(loopDir, 'project_profile.json'),
     testsFile:        path.join(loopDir, 'tests.json'),
+    testEnvFile:      path.join(loopDir, 'test.env'),
     claudeMd:         getTemplatePath('CLAUDE.md'),
     scanProtocol:     getTemplatePath('SCAN_PROTOCOL.md'),
     runtime,

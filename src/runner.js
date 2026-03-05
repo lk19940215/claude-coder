@@ -77,17 +77,38 @@ function killServicesByProfile() {
   } catch { /* ignore profile read errors */ }
 }
 
+function sleepSync(ms) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) { /* busy wait */ }
+}
+
 function rollback(headBefore, reason) {
   if (!headBefore || headBefore === 'none') return;
 
   killServicesByProfile();
 
+  if (process.platform === 'win32') sleepSync(1500);
+
+  const cwd = getProjectRoot();
+  const gitEnv = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
+
   log('warn', `回滚到 ${headBefore} ...`);
-  try {
-    execSync(`git reset --hard ${headBefore}`, { cwd: getProjectRoot(), stdio: 'pipe' });
-    log('ok', '回滚完成');
-  } catch (err) {
-    log('error', `回滚失败: ${err.message}`);
+
+  let success = false;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      execSync(`git reset --hard ${headBefore}`, { cwd, stdio: 'pipe', env: gitEnv });
+      log('ok', '回滚完成');
+      success = true;
+      break;
+    } catch (err) {
+      if (attempt === 1) {
+        log('warn', `回滚首次失败，等待后重试: ${err.message}`);
+        sleepSync(2000);
+      } else {
+        log('error', `回滚失败: ${err.message}`);
+      }
+    }
   }
 
   appendProgress({
@@ -95,6 +116,7 @@ function rollback(headBefore, reason) {
     timestamp: new Date().toISOString(),
     reason: reason || 'harness 校验失败',
     rollbackTo: headBefore,
+    success,
   });
 }
 
@@ -267,10 +289,13 @@ async function run(requirement, opts = {}) {
     }
 
     const headBefore = getHead();
+    const nextTask = findNextTask(taskData);
+    const taskId = nextTask?.id || 'unknown';
 
     // Run coding session
     const sessionResult = await runCodingSession(session, {
       projectRoot,
+      taskId,
       consecutiveFailures,
       maxSessions,
       lastValidateLog: consecutiveFailures > 0 ? '上次校验失败' : '',
@@ -340,9 +365,17 @@ async function add(instruction, opts = {}) {
   ensureLoopDir();
 
   const config = loadConfig();
-  if (config.provider !== 'claude' && config.baseUrl) {
-    log('ok', `模型配置已加载: ${config.provider}${config.model ? ` (${config.model})` : ''}`);
+
+  if (!opts.model) {
+    if (config.defaultOpus) {
+      opts.model = config.defaultOpus;
+    } else if (config.provider === 'claude' || !config.baseUrl) {
+      opts.model = 'claude-sonnet-4-20250514';
+    }
   }
+
+  const displayModel = opts.model || config.model || '(default)';
+  log('ok', `模型配置已加载: ${config.provider || 'claude'} (add 使用: ${displayModel})`);
 
   if (!fs.existsSync(p.profile) || !fs.existsSync(p.tasksFile)) {
     log('error', 'add 需要先完成初始化（至少运行一次 claude-coder run）');

@@ -51,7 +51,8 @@ function buildQueryOptions(config, opts = {}) {
     env: buildEnvVars(config),
     settingSources: ['project'],
   };
-  if (config.model) base.model = config.model;
+  if (opts.model) base.model = opts.model;
+  else if (config.model) base.model = config.model;
   return base;
 }
 
@@ -62,6 +63,10 @@ function extractResult(messages) {
   return null;
 }
 
+function stripAnsi(str) {
+  return str.replace(/\x1b\[[0-9;]*m/g, '');
+}
+
 function logMessage(message, logStream, indicator) {
   if (message.type === 'assistant' && message.message?.content) {
     for (const block of message.message.content) {
@@ -70,6 +75,9 @@ function logMessage(message, logStream, indicator) {
           const statusLine = indicator.getStatusLine();
           process.stderr.write('\r\x1b[K');
           if (statusLine) process.stderr.write(statusLine + '\n');
+          if (logStream && statusLine) {
+            logStream.write('\n' + stripAnsi(statusLine) + '\n');
+          }
         }
         process.stdout.write(block.text);
         if (logStream) logStream.write(block.text);
@@ -88,7 +96,9 @@ async function runCodingSession(sessionNum, opts = {}) {
   const systemPrompt = buildSystemPrompt(false);
 
   const p = paths();
-  const logFile = path.join(p.logsDir, `session_${sessionNum}_${Date.now()}.log`);
+  const taskId = opts.taskId || 'unknown';
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const logFile = path.join(p.logsDir, `${taskId}_session_${sessionNum}_${dateStr}.log`);
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 
   indicator.start(sessionNum);
@@ -164,7 +174,7 @@ async function runScanSession(requirement, opts = {}) {
   const systemPrompt = buildSystemPrompt(true);
 
   const p = paths();
-  const logFile = path.join(p.logsDir, `scan_${Date.now()}.log`);
+  const logFile = path.join(p.logsDir, `scan_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.log`);
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 
   indicator.start(0);
@@ -218,7 +228,7 @@ async function runAddSession(instruction, opts = {}) {
   const prompt = buildAddPrompt(instruction);
 
   const p = paths();
-  const logFile = path.join(p.logsDir, `add_tasks_${Date.now()}.log`);
+  const logFile = path.join(p.logsDir, `add_tasks_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.log`);
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
 
   indicator.start(0);
