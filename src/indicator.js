@@ -17,11 +17,13 @@ class Indicator {
     this.sessionNum = 0;
     this.startTime = Date.now();
     this._lastContentKey = '';
+    this._lastRenderTime = 0;
   }
 
   start(sessionNum) {
     this.sessionNum = sessionNum;
     this.startTime = Date.now();
+    this._lastRenderTime = Date.now();
     this.timer = setInterval(() => this._render(), 500);
   }
 
@@ -87,6 +89,16 @@ class Indicator {
 
   _render() {
     this.spinnerIndex++;
+    const contentKey = `${this.phase}|${this.step}|${this.toolTarget}`;
+    const now = Date.now();
+    const contentChanged = contentKey !== this._lastContentKey;
+
+    if (!contentChanged && now - this._lastRenderTime < 3000) {
+      return;
+    }
+    this._lastContentKey = contentKey;
+    this._lastRenderTime = now;
+
     const line = this.getStatusLine();
     const maxWidth = process.stderr.columns || 80;
     const truncated = line.length > maxWidth + 20 ? line.slice(0, maxWidth + 20) : line;
