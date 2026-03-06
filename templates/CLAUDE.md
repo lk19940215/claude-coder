@@ -51,7 +51,8 @@
 | `.claude-coder/session_result.json` | 本次会话的结构化输出 | 每次会话结束时覆盖写入 |
 | `.claude-coder/tests.json` | 功能验证记录（轻量） | 可新增和更新；仅当功能涉及 API 或核心逻辑时记录 |
 | `.claude-coder/test.env` | 测试凭证（API Key、测试账号等） | **可追加写入**；发现测试需要的凭证时持久化到此文件 |
-| `.claude-coder/playwright-auth.json` | 浏览器登录状态（cookies + localStorage） | 只读；由 `claude-coder auth` 生成，MCP 每次会话自动加载 |
+| `.claude-coder/playwright-auth.json` | 浏览器登录状态快照（isolated 模式时由 `claude-coder auth` 生成） | 只读；persistent/extension 模式下此文件不存在 |
+| `.mcp.json` | MCP 服务配置（由 `claude-coder auth` 自动生成） | **只读，绝对不得修改** |
 
 ### requirements.md 处理原则
 

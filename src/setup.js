@@ -90,7 +90,7 @@ async function setup() {
   console.log('============================================');
   console.log('');
   console.log('  第一步: 模型提供商配置');
-  console.log('  第二步: MCP 工具 + 调试输出（可选）');
+  console.log('  第二步: MCP 工具配置（可选）');
   console.log('');
 
   // Detect existing config
@@ -336,34 +336,45 @@ async function setup() {
   if (mcpChoice === 1) {
     configLines.push('MCP_PLAYWRIGHT=true');
     log('ok', 'Playwright MCP 已启用');
+
     console.log('');
-    console.log('  请确保已安装 Playwright MCP：');
-    console.log(`  ${COLOR.blue}npx @anthropic-ai/claude-code mcp add playwright -- npx @anthropic-ai/playwright-mcp${COLOR.reset}`);
-    console.log(`  ${COLOR.blue}详见: https://github.com/microsoft/playwright-mcp${COLOR.reset}`);
+    console.log('请选择 Playwright MCP 浏览器模式:');
+    console.log('');
+    console.log('  1) persistent - 懒人模式（默认，推荐）');
+    console.log('     登录一次永久生效，适合 Google SSO、企业内网 API 拉取等日常开发');
+    console.log('');
+    console.log('  2) isolated - 开发模式');
+    console.log('     每次会话从快照加载，适合验证登录流程的自动化测试');
+    console.log('');
+    console.log('  3) extension - 连接真实浏览器（实验性）');
+    console.log('     通过 Chrome 扩展复用已有登录态和插件');
+    console.log('     需要安装 "Playwright MCP Bridge" 扩展');
+    console.log('');
+
+    const modeChoice = await askChoice(rl, '选择 [1-3，默认 1]: ', 1, 3, 1);
+    const modeMap = { 1: 'persistent', 2: 'isolated', 3: 'extension' };
+    const mode = modeMap[modeChoice];
+    configLines.push(`MCP_PLAYWRIGHT_MODE=${mode}`);
+
+    console.log('');
+    if (mode === 'extension') {
+      console.log(`  ${COLOR.yellow}⚠ 前置条件：安装 Playwright MCP Bridge 浏览器扩展${COLOR.reset}`);
+      console.log(`  ${COLOR.blue}  https://chromewebstore.google.com/detail/playwright-mcp-bridge/mmlmfjhmonkocbjadbfplnigmagldckm${COLOR.reset}`);
+      console.log('');
+      console.log('  安装扩展后，运行 claude-coder auth 生成 .mcp.json 配置');
+    } else if (mode === 'persistent') {
+      console.log('  使用 claude-coder auth <URL> 打开浏览器完成首次登录');
+      console.log('  登录状态将持久保存，后续 MCP 会话自动复用');
+      console.log('');
+      console.log('  请确保已安装 Playwright:');
+      console.log(`  ${COLOR.blue}npx playwright install chromium${COLOR.reset}`);
+    } else {
+      console.log('  使用 claude-coder auth <URL> 录制登录状态到 playwright-auth.json');
+      console.log('  MCP 每次会话从此文件加载初始 cookies/localStorage');
+    }
   } else {
     configLines.push('MCP_PLAYWRIGHT=false');
     log('info', '已跳过 Playwright MCP');
-  }
-
-  // Debug output
-  console.log('');
-  console.log('是否开启 Claude 调试输出（便于排查问题，输出较多）？');
-  console.log('');
-  console.log('  1) 否 - 静默（默认，推荐）');
-  console.log('  2) 是 - verbose（完整每轮输出）');
-  console.log('  3) 是 - mcp（MCP 调用，如 Playwright Click）');
-  console.log('');
-
-  const debugChoice = await askChoice(rl, '选择 [1-3，默认 1]: ', 1, 3, 1);
-  configLines.push('', '# Claude 调试（可随时修改）');
-  if (debugChoice === 2) {
-    configLines.push('CLAUDE_DEBUG=verbose');
-    log('info', '已启用 CLAUDE_DEBUG=verbose');
-  } else if (debugChoice === 3) {
-    configLines.push('CLAUDE_DEBUG=mcp');
-    log('info', '已启用 CLAUDE_DEBUG=mcp');
-  } else {
-    configLines.push('# CLAUDE_DEBUG=verbose  # 取消注释可开启');
   }
 
   // Write config
@@ -378,6 +389,7 @@ async function setup() {
   console.log(`  配置文件: ${p.envFile}`);
   console.log('  使用方式: claude-coder run "你的需求"');
   console.log('  详细需求: 创建 requirements.md 后运行 claude-coder run');
+  console.log('  切换模式: claude-coder config mcp <persistent|isolated|extension>');
   console.log('  重新配置: claude-coder setup');
   console.log('');
 }

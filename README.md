@@ -60,6 +60,7 @@ claude-coder run "实现用户注册和登录功能"
 | `claude-coder validate` | 手动校验 |
 | `claude-coder status` | 查看进度和成本 |
 | `claude-coder config sync` | 同步配置到 ~/.claude/ |
+| `claude-coder config mcp <mode>` | 快速切换 Playwright 模式 |
 
 **选项**：`--max N` 限制 session 数（默认 50），`--pause N` 每 N 个 session 暂停确认（默认不暂停）。
 
@@ -97,10 +98,10 @@ your-project/
     progress.json           # 会话历史 + 成本
     tests.json              # 验证记录
     test.env                # 测试凭证（API Key 等，可选）
-    playwright-auth.json    # 登录状态快照（备份参考，auth 命令生成）
-    browser-profile/        # 持久化浏览器 Profile（MCP 实际使用）
+    playwright-auth.json    # 登录状态快照（isolated 模式，auth 命令生成）
     .runtime/               # 临时文件
       logs/                 # 每 session 独立日志（含工具调用记录）
+      browser-profile/      # 持久化浏览器 Profile（persistent 模式，auth 命令生成）
   requirements.md           # 需求文档（可选）
 ```
 

@@ -15,11 +15,13 @@ class Indicator {
     this.lastToolTime = Date.now();
     this.sessionNum = 0;
     this.startTime = Date.now();
+    this.stallTimeoutMin = 30;
   }
 
-  start(sessionNum) {
+  start(sessionNum, stallTimeoutMin) {
     this.sessionNum = sessionNum;
     this.startTime = Date.now();
+    if (stallTimeoutMin > 0) this.stallTimeoutMin = stallTimeoutMin;
     this.timer = setInterval(() => this._render(), 500);
   }
 
@@ -64,7 +66,7 @@ class Indicator {
 
     let line = `${spinner} [Session ${this.sessionNum}] ${clock} ${phaseLabel} ${mm}:${ss}`;
     if (idleMin >= 2) {
-      line += ` | ${COLOR.red}${idleMin}分无工具调用${COLOR.reset}`;
+      line += ` | ${COLOR.red}${idleMin}分无工具调用（等待模型响应, ${this.stallTimeoutMin}分钟超时自动中断）${COLOR.reset}`;
     }
     if (this.step) {
       line += ` | ${this.step}`;
@@ -83,8 +85,7 @@ class Indicator {
 
   _render() {
     this.spinnerIndex++;
-    const line = this.getStatusLine();
-    process.stderr.write(`\r\x1b[K${line}`);
+    process.stderr.write(`\r\x1b[K${this.getStatusLine()}`);
   }
 }
 
@@ -107,7 +108,7 @@ function extractBashLabel(cmd) {
 function extractBashTarget(cmd) {
   let clean = cmd.replace(/^(?:cd\s+\S+\s*&&\s*)+/g, '').trim();
   clean = clean.split(/\s*(?:\|{1,2}|;|&&|2>&1|>\s*\/dev\/null)\s*/)[0].trim();
-  return clean.slice(0, 40);
+  return clean;
 }
 
 function inferPhaseStep(indicator, toolName, toolInput) {

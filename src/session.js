@@ -135,7 +135,8 @@ async function runCodingSession(sessionNum, opts = {}) {
     editThreshold: config.editThreshold,
   });
 
-  indicator.start(sessionNum);
+  const stallTimeoutMin = Math.floor(stallTimeoutMs / 60000);
+  indicator.start(sessionNum, stallTimeoutMin);
 
   try {
     const queryOpts = buildQueryOptions(config, opts);
@@ -203,7 +204,7 @@ async function runScanSession(requirement, opts = {}) {
     stallTimeoutMs,
   });
 
-  indicator.start(0);
+  indicator.start(0, Math.floor(stallTimeoutMs / 60000));
   log('info', `正在调用 Claude Code 执行项目扫描（${projectType}项目）...`);
 
   try {
@@ -264,7 +265,7 @@ async function runAddSession(instruction, opts = {}) {
     stallTimeoutMs,
   });
 
-  indicator.start(0);
+  indicator.start(0, Math.floor(stallTimeoutMs / 60000));
   log('info', '正在追加任务...');
 
   try {

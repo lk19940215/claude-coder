@@ -48,7 +48,11 @@ function findNextTask(data) {
       });
     })
     .sort((a, b) => (a.priority || 999) - (b.priority || 999));
-  return pending[0] || null;
+  if (pending.length > 0) return pending[0];
+
+  const inProgress = features.filter(f => f.status === 'in_progress')
+    .sort((a, b) => (a.priority || 999) - (b.priority || 999));
+  return inProgress[0] || null;
 }
 
 function setStatus(data, taskId, newStatus) {

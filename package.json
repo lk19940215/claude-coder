@@ -1,6 +1,6 @@
 {
   "name": "claude-coder",
-  "version": "1.5.7",
+  "version": "1.6.0",
   "description": "Claude Coder — Autonomous coding agent harness powered by Claude Code SDK. Scan, plan, code, validate, git-commit in a loop.",
   "bin": {
     "claude-coder": "bin/cli.js"
@@ -38,5 +38,7 @@
   "peerDependencies": {
     "@anthropic-ai/claude-agent-sdk": ">=0.1.0"
   },
-  "dependencies": {}
+  "optionalDependencies": {
+    "playwright": "^1.58.2"
+  }
 }

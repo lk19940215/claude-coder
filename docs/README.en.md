@@ -60,6 +60,7 @@ Each session, the agent autonomously follows 6 steps: restore context → env ch
 | `claude-coder validate` | Manually validate last session |
 | `claude-coder status` | View progress and costs |
 | `claude-coder config sync` | Sync config to ~/.claude/ |
+| `claude-coder config mcp <mode>` | Switch Playwright mode (persistent/isolated/extension) |
 
 **Options**: `--max N` limit sessions (default 50), `--pause N` pause every N sessions (default: no pause).
 
@@ -85,10 +86,10 @@ your-project/
     progress.json           # Session history + costs
     tests.json              # Verification records
     test.env                # Test credentials (API keys, optional)
-    playwright-auth.json    # Login state snapshot (backup, via auth command)
-    browser-profile/        # Persistent browser profile (used by MCP)
+    playwright-auth.json    # Login state snapshot (isolated mode, via auth command)
     .runtime/               # Temp files
       logs/                 # Per-session logs (with tool call traces)
+      browser-profile/      # Persistent browser profile (persistent mode, via auth command)
   requirements.md           # Requirements (optional)
 ```
 

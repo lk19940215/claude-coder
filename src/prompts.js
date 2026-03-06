@@ -98,10 +98,23 @@ function buildCodingPrompt(sessionNum, opts = {}) {
     testEnvHint = `如需持久化测试凭证（API Key、测试账号密码等），写入 ${projectRoot}/.claude-coder/test.env（KEY=value 格式，每行一个）。后续 session 会自动感知。`;
   }
 
-  // Hint 6c: Playwright auth state
+  // Hint 6c: Playwright mode awareness
   let playwrightAuthHint = '';
-  if (fs.existsSync(p.playwrightAuth)) {
-    playwrightAuthHint = `已检测到 Playwright 登录状态（${projectRoot}/.claude-coder/playwright-auth.json），MCP 使用 --isolated --storage-state 模式，每次会话自动加载 localStorage 和 cookies。`;
+  if (config.mcpPlaywright) {
+    const mode = config.playwrightMode;
+    switch (mode) {
+      case 'persistent':
+        playwrightAuthHint = 'Playwright MCP 使用 persistent 模式（user-data-dir），浏览器登录状态持久保存在本地配置中，无需额外登录操作。';
+        break;
+      case 'isolated':
+        playwrightAuthHint = fs.existsSync(p.playwrightAuth)
+          ? `Playwright MCP 使用 isolated 模式，已检测到登录状态文件（playwright-auth.json），每次会话自动加载 cookies 和 localStorage。`
+          : 'Playwright MCP 使用 isolated 模式，但未检测到登录状态文件。如目标页面需要登录，请先运行 claude-coder auth <URL>。';
+        break;
+      case 'extension':
+        playwrightAuthHint = 'Playwright MCP 使用 extension 模式，已连接用户真实浏览器，直接复用浏览器已有的登录态和扩展。注意：操作会影响用户正在使用的浏览器。';
+        break;
+    }
   }
 
   // Hint 7: Session memory (read flat session_result.json)

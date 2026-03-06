@@ -57,6 +57,7 @@ function paths() {
     testsFile:        path.join(loopDir, 'tests.json'),
     testEnvFile:      path.join(loopDir, 'test.env'),
     playwrightAuth:   path.join(loopDir, 'playwright-auth.json'),
+    browserProfile:   path.join(runtime, 'browser-profile'),
     mcpConfig:        path.join(getProjectRoot(), '.mcp.json'),
     claudeMd:         getTemplatePath('CLAUDE.md'),
     scanProtocol:     getTemplatePath('SCAN_PROTOCOL.md'),
@@ -97,7 +98,7 @@ function loadConfig() {
     timeoutMs: parseInt(env.API_TIMEOUT_MS, 10) || 3000000,
     mcpToolTimeout: parseInt(env.MCP_TOOL_TIMEOUT, 10) || 30000,
     mcpPlaywright: env.MCP_PLAYWRIGHT === 'true',
-    debug: env.CLAUDE_DEBUG || '',
+    playwrightMode: env.MCP_PLAYWRIGHT_MODE || 'persistent',
     disableNonessential: env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC || '',
     effortLevel: env.CLAUDE_CODE_EFFORT_LEVEL || '',
     smallFastModel: env.ANTHROPIC_SMALL_FAST_MODEL || '',
@@ -190,6 +191,21 @@ function syncToGlobal() {
   log('ok', `已同步配置到 ${settingsPath}`);
 }
 
+function updateEnvVar(key, value) {
+  const p = paths();
+  if (!fs.existsSync(p.envFile)) return false;
+  let content = fs.readFileSync(p.envFile, 'utf8');
+  const regex = new RegExp(`^${key}=.*$`, 'm');
+  if (regex.test(content)) {
+    content = content.replace(regex, `${key}=${value}`);
+  } else {
+    const suffix = content.endsWith('\n') ? '' : '\n';
+    content += `${suffix}${key}=${value}\n`;
+  }
+  fs.writeFileSync(p.envFile, content, 'utf8');
+  return true;
+}
+
 module.exports = {
   COLOR,
   log,
@@ -203,4 +219,5 @@ module.exports = {
   buildEnvVars,
   getAllowedTools,
   syncToGlobal,
+  updateEnvVar,
 };
