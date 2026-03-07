@@ -1,6 +1,6 @@
 {
   "session_result": "success",
-  "status_before": "2 done, 0 pending",
-  "status_after": "2 done, 1 pending",
-  "notes": "追加了 1 个任务：feat-003 添加根路由返回 API 欢迎信息。\n\n问题诊断：用户访问 localhost:3000/ 时看到 'Cannot GET /'，原因是 server.js 只定义了 /health 和 /api/todos 路由，根路径未处理。\n\n解决方案：新增 feat-003 任务，添加 GET / 路由返回 API 欢迎信息和端点列表。"
+  "status_before": "pending",
+  "status_after": "done",
+  "notes": "完成 feat-003：添加根路由 GET / 返回 API 欢迎信息。实现：在 server.js 中新增根路由，返回包含 message、version 和 endpoints 对象的 JSON 响应。验证：curl 测试通过，返回 'Welcome to TODO API'。已更新 tests.json 添加验证记录 (test-feat003-root)。服务保持运行中（端口 3000）。"
 }
