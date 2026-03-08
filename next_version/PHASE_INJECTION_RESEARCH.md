@@ -36,8 +36,6 @@
 - **注入机制**: 作为工具调用的附加上下文出现，紧邻工具结果，处于模型注意力高峰区域
 
 ### Plan功能调研结果
-**重要发现**: "Coding Plan" 是 **订阅服务名称**，不是SDK的"plan"功能。
-- **Coding Plan**: Anthropic提供的付费订阅服务，提供更高API调用限额
 - **Plan功能**: SDK本身**不提供原生的plan功能**，但支持通过以下方式实现规划能力：
   - **Agent定义**: 可配置专门的planning agent (`agents`选项)
   - **多轮对话**: 通过AsyncIterable实现复杂对话流
