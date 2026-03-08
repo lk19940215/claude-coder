@@ -123,7 +123,7 @@
         "实现过滤按钮组（全部/待办/已完成），使用 Mantine SegmentedControl",
         "【验证】输入框提交可触发添加操作，过滤可切换列表"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": [
         "feat-007"
       ]
