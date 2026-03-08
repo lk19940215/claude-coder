@@ -48,6 +48,14 @@
       "expected": "HTTP 200, 页面正常加载，包含 TODO 标题和交互元素",
       "last_result": "pass",
       "last_run_session": 3
+    },
+    {
+      "id": "test-feat007-components",
+      "feature_id": "feat-007",
+      "verify": "cd client && npm run build 2>&1 | grep -q 'built in' && echo 'pass'",
+      "expected": "TypeScript 编译通过，无类型错误",
+      "last_result": "pass",
+      "last_run_session": 4
     }
   ]
 }

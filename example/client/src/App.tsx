@@ -4,16 +4,16 @@ import {
   Paper,
   Title,
   Text,
-  Checkbox,
   Button,
   Group,
   Badge,
-  ActionIcon,
   Divider,
   Center,
+  rem,
 } from '@mantine/core'
-import { IconTrash, IconPlus, IconCheck, IconList } from '@tabler/icons-react'
+import { IconPlus, IconList } from '@tabler/icons-react'
 import { useTodoStore } from './store/todoStore'
+import { TodoList } from './components/TodoList'
 
 function App() {
   const { todos, filter, loading, error, fetchTodos, addTodo, toggleTodo, deleteTodo, setFilter } = useTodoStore()
@@ -39,7 +39,7 @@ function App() {
       <Center mb="xl">
         <div className="text-center">
           <Title order={1} className="heading-primary flex items-center justify-center gap-3">
-            <IconList size={40} />
+            <IconList size={40} stroke={1.5} />
             TODO 待办事项
           </Title>
           <Text c="dimmed" size="lg">
@@ -74,7 +74,7 @@ function App() {
       {/* 添加任务按钮 */}
       <Group mb="lg">
         <Button
-          leftSection={<IconPlus size={18} />}
+          leftSection={<IconPlus style={{ width: rem(18), height: rem(18) }} />}
           color="blue"
           fullWidth
           onClick={() => {
@@ -120,69 +120,14 @@ function App() {
         </Button>
       </Group>
 
-      {/* 任务列表 */}
-      <Paper p="lg" radius="lg" shadow="md" className="card-custom">
-        <Title order={3} mb="md" className="flex items-center gap-2">
-          <IconCheck size={24} />
-          任务列表
-        </Title>
-
-        {loading && todos.length === 0 ? (
-          <Center py="xl">
-            <Text c="dimmed">加载中...</Text>
-          </Center>
-        ) : error ? (
-          <Center py="xl">
-            <Text c="red">{error}</Text>
-          </Center>
-        ) : filteredTodos.length === 0 ? (
-          <Center py="xl">
-            <Text c="dimmed">
-              {todos.length === 0 ? '暂无任务，点击添加新任务' : '没有符合条件的任务'}
-            </Text>
-          </Center>
-        ) : (
-          filteredTodos.map(todo => (
-            <Paper
-              key={todo.id}
-              p="md"
-              mb="sm"
-              radius="md"
-              className={`transition-all hover:shadow-md cursor-pointer ${
-                todo.completed ? 'bg-gray-50' : 'bg-white'
-              }`}
-            >
-              <Group>
-                <Checkbox
-                  checked={todo.completed}
-                  onChange={() => toggleTodo(todo.id)}
-                  color="blue"
-                  size="lg"
-                />
-                <Text
-                  flex={1}
-                  style={{
-                    textDecoration: todo.completed ? 'line-through' : 'none',
-                    color: todo.completed ? 'var(--mantine-color-dimmed)' : 'inherit'
-                  }}
-                >
-                  {todo.title}
-                </Text>
-                <Badge color={todo.completed ? 'green' : 'blue'} variant="light">
-                  {todo.completed ? '已完成' : '进行中'}
-                </Badge>
-                <ActionIcon
-                  color="red"
-                  variant="subtle"
-                  onClick={() => deleteTodo(todo.id)}
-                >
-                  <IconTrash size={18} />
-                </ActionIcon>
-              </Group>
-            </Paper>
-          ))
-        )}
-      </Paper>
+      {/* 任务列表组件 */}
+      <TodoList
+        todos={filteredTodos}
+        loading={loading}
+        error={error}
+        onToggle={toggleTodo}
+        onDelete={deleteTodo}
+      />
     </Container>
   )
 }

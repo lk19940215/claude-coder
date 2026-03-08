@@ -1,6 +1,6 @@
 {
   "session_result": "success",
-  "status_before": "3 tasks (3 done, 0 pending)",
-  "status_after": "10 tasks (3 done, 7 pending)",
-  "notes": "追加了 7 个任务：前端项目从零搭建（feat-004 至 feat-010）。包含：1.初始化 Vite+React+TS 项目并安装所有依赖 2.配置 Tailwind CSS 和 Mantine 样式 3.实现 API 客户端和 Zustand 状态管理 4.构建 Todo 列表组件 5.实现创建表单和过滤功能 6.集成完整主页面 7.端到端测试。注：用户需求未明确是否需要编辑功能，暂按基础版实现；若需编辑功能，可后续追加任务。"
+  "status_before": "pending",
+  "status_after": "done",
+  "notes": "feat-006 完成：成功实现 API 客户端和 Zustand 状态管理。\n\n【已完成】\n1. client/src/lib/api.ts - axios 实例、请求/响应拦截器、统一错误处理、Todo 类型定义\n2. client/src/store/todoStore.ts - Zustand Store（todos 状态、fetch/add/toggle/delete actions）、API 服务层封装（todosApi）\n3. client/src/main.tsx - 修复入口文件（之前与 App.tsx 内容颠倒）\n4. client/src/App.tsx - 集成 Zustand Store，实现任务添加/完成/删除/过滤功能\n5. server.js - 添加 CORS 中间件（cors 包）\n\n【验证通过】\n- Playwright 端到端测试：添加任务、勾选完成、删除任务功能全部正常\n- 前端构建成功（npm run build），无 TypeScript 错误\n- 前后端服务正常运行（backend:3000, frontend:5173）\n\n【注意事项】\n- 后端需要 CORS 支持，已添加 cors 包并配置\n- Store 使用乐观更新（optimistic update），先更新 UI 再请求 API，失败时回滚\n- 过滤功能支持：全部/待办/已完成三种状态\n\n【下一个会话】\n- feat-007 可以继续实现 Todo 组件（当前 App.tsx 已有基础功能，但代码较乱，建议拆分组件）"
 }

@@ -106,7 +106,7 @@
         "添加交互反馈（hover 效果、删除淡出动画）",
         "【验证】手动添加测试数据，组件正常渲染列表"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": [
         "feat-005",
         "feat-006"
