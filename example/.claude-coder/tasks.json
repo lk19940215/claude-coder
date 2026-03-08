@@ -139,7 +139,7 @@
         "添加页面标题、统计信息（总任务数、已完成数）",
         "【验证】访问 http://localhost:5173/ 可看到完整可交互页面"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": [
         "feat-004",
         "feat-008"
@@ -157,7 +157,7 @@
         "【P1】勾选任务完成，验证状态变化和样式更新",
         "【P1】点击删除按钮，验证任务从列表移除且调用 API"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": [
         "feat-009"
       ]
