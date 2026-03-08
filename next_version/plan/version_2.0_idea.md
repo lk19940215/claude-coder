@@ -61,9 +61,9 @@
 - Coder Agent
 - Reviewer
 
-# 主Agent (Supervisor + harness 控制循环) 遵守 prompts\CLAUDE.md 对子Agent进行监督？
-
 # 代码重构
+
+主Agent (Supervisor + harness 控制循环) 遵守 prompts\CLAUDE.md 对子Agent进行监督？
 
 ## 目录结构
 
@@ -101,4 +101,12 @@ prompts/
 template/
     test_rule.md
 ```
-## 结合 additionalContext
+### 结合 additionalContext
+
+## 难点
+- 如何通信
+- 如何让子Agent返回想要的内容。
+
+## 其它问题
+- 基于这个claude Agent SDK,再封装，会不会多此一举？
+- 中断的时候，不直接中断，总结一个上下文传给下一个 session?
