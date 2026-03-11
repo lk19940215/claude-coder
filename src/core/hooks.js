@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { inferPhaseStep } = require('./indicator');
-const { log, paths } = require('./config');
+const { inferPhaseStep } = require('../common/indicator');
+const { log, paths } = require('../common/config');
 
 // ─────────────────────────────────────────────────────────────
 // Constants

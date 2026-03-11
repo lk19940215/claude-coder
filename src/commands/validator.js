@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const { execSync } = require('child_process');
-const { paths, log, getProjectRoot } = require('./config');
-const { loadTasks, getFeatures } = require('./tasks');
+const { paths, log, getProjectRoot } = require('../common/config');
+const { loadTasks, getFeatures } = require('../modules/tasks');
 
 function tryExtractFromBroken(text) {
   const result = {};

@@ -104,17 +104,17 @@ async function main() {
 
   switch (command) {
     case 'run': {
-      const runner = require('../src/runner');
+      const runner = require('../src/core/runner');
       await runner.run(opts);
       break;
     }
     case 'setup': {
-      const setup = require('../src/setup');
+      const setup = require('../src/commands/setup');
       await setup.setup();
       break;
     }
     case 'init': {
-      const { init } = require('../src/init');
+      const { init } = require('../src/commands/init');
       await init();
       break;
     }
@@ -135,33 +135,33 @@ async function main() {
         console.error('用法: claude-coder add "任务描述"  或  claude-coder add -r [requirements.md]');
         process.exit(1);
       }
-      const runner = require('../src/runner');
+      const runner = require('../src/core/runner');
       await runner.add(instruction, opts);
       break;
     }
     case 'auth': {
-      const { auth } = require('../src/auth');
+      const { auth } = require('../src/commands/auth');
       await auth(positional[0] || null);
       break;
     }
     case 'validate': {
-      const validator = require('../src/validator');
+      const validator = require('../src/commands/validator');
       const result = await validator.validate();
       process.exit(result.fatal ? 1 : 0);
       break;
     }
     case 'status': {
-      const tasks = require('../src/tasks');
+      const tasks = require('../src/modules/tasks');
       tasks.showStatus();
       break;
     }
     case 'simplify': {
-      const { runSimplifySession } = require('../src/session');
+      const { runSimplifySession } = require('../src/core/session');
       await runSimplifySession(opts.n, opts);
       break;
     }
     case 'plan': {
-      const plan = require('../src/plan');
+      const plan = require('../src/core/plan');
       const args = [];
       if (opts.readFile) {
         args.push('-r', opts.readFile);

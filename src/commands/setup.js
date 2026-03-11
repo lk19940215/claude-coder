@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
-const { ensureLoopDir, paths, log, COLOR, getProjectRoot, parseEnvFile, updateEnvVar } = require('./config');
+const { ensureLoopDir, paths, log, COLOR, getProjectRoot, parseEnvFile, updateEnvVar } = require('../common/config');
 
 function createInterface() {
   return readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -73,7 +73,7 @@ function ensureGitignore() {
 
 // === 提供商配置模块 ===
 
-async function configureClaude(rl) {
+async function configureDefault() {
   return {
     lines: [
       '# Claude Coder 模型配置',
@@ -87,104 +87,104 @@ async function configureClaude(rl) {
   };
 }
 
-async function configureGLM(rl, existing) {
-  console.log('请选择 GLM 平台:');
+async function configureCodingPlan(rl, existing) {
+  // 1. 选择或输入 BASE_URL
+  console.log('请选择或输入 BASE_URL:');
   console.log('');
-  console.log('  1) 智谱开放平台 (open.bigmodel.cn) - 国内直连');
-  console.log('  2) Z.AI (api.z.ai) - 海外节点');
+  console.log('  1) 智谱 GLM        https://open.bigmodel.cn/api/anthropic');
+  console.log('  2) Z.AI           https://api.z.ai/api/anthropic');
+  console.log('  3) 阿里云百炼      https://coding.dashscope.aliyuncs.com/apps/anthropic');
+  console.log('  4) 其他（手动输入）');
   console.log('');
-  const platChoice = await askChoice(rl, '选择 [1-2，默认 1]: ', 1, 2, 1);
-  const isBigmodel = platChoice === 1;
-  const glmProvider = isBigmodel ? 'glm-bigmodel' : 'glm-zai';
-  const glmBaseUrl = isBigmodel
-    ? 'https://open.bigmodel.cn/api/anthropic'
-    : 'https://api.z.ai/api/anthropic';
-  const glmApiUrl = isBigmodel
-    ? 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys'
-    : 'https://z.ai/manage-apikey/apikey-list';
 
-  console.log('');
-  console.log('请选择 GLM 模型版本:');
-  console.log('');
-  console.log('  1) GLM 4.7  - 旗舰模型，推理与代码能力强');
-  console.log('  2) GLM 5    - 最新模型（2026），能力更强');
-  console.log('');
-  const modelChoice = await askChoice(rl, '选择 [1-2，默认 1]: ', 1, 2, 1);
-  const glmModel = modelChoice === 1 ? 'glm-4.7' : 'glm-5';
+  const urlChoice = await askChoice(rl, '选择 [1-4，默认 1]: ', 1, 4, 1);
+  let finalUrl = '';
 
-  const existingKey = existing.MODEL_PROVIDER === glmProvider ? existing.ANTHROPIC_API_KEY : '';
-  const apiKey = await askApiKey(rl, glmProvider, glmApiUrl, existingKey);
+  if (urlChoice === 4) {
+    const defaultUrl = existing.ANTHROPIC_BASE_URL || '';
+    console.log('');
+    let baseUrl = await ask(rl, `  BASE_URL${defaultUrl ? ` (回车保留: ${defaultUrl})` : ''}: `);
+    finalUrl = baseUrl.trim() || defaultUrl;
+  } else {
+    const urlMap = {
+      1: 'https://open.bigmodel.cn/api/anthropic',
+      2: 'https://api.z.ai/api/anthropic',
+      3: 'https://coding.dashscope.aliyuncs.com/apps/anthropic',
+    };
+    finalUrl = urlMap[urlChoice];
+  }
 
-  return {
-    lines: [
-      '# Claude Coder 模型配置',
-      `# 提供商: GLM (${glmProvider})`,
-      `# 模型: ${glmModel}`,
-      '',
-      `MODEL_PROVIDER=${glmProvider}`,
-      `ANTHROPIC_MODEL=${glmModel}`,
-      `ANTHROPIC_BASE_URL=${glmBaseUrl}`,
-      `ANTHROPIC_API_KEY=${apiKey}`,
-      'API_TIMEOUT_MS=3000000',
-      'MCP_TOOL_TIMEOUT=30000',
-    ],
-    summary: `GLM (${glmProvider}, ${glmModel})`,
+  if (!finalUrl) {
+    console.error('BASE_URL 不能为空');
+    process.exit(1);
+  }
+
+  // 2. 输入 API_KEY（提示获取地址）
+  const apiUrlMap = {
+    'open.bigmodel.cn': 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
+    'api.z.ai': 'https://z.ai/manage-apikey/apikey-list',
+    'dashscope.aliyuncs.com': 'https://bailian.console.aliyun.com/?tab=model#/api-key',
   };
-}
 
-async function configureAliyun(rl, existing) {
-  console.log('请选择阿里云百炼区域:');
+  let apiUrlHint = '';
+  for (const [host, url] of Object.entries(apiUrlMap)) {
+    if (finalUrl.includes(host)) {
+      apiUrlHint = url;
+      break;
+    }
+  }
+
   console.log('');
-  console.log('  1) 国内版 (coding.dashscope.aliyuncs.com)');
-  console.log('  2) 国际版 (coding-intl.dashscope.aliyuncs.com)');
-  console.log('');
-  const regionChoice = await askChoice(rl, '选择 [1-2，默认 1]: ', 1, 2, 1);
-  const aliyunBaseUrl = regionChoice === 1
-    ? 'https://coding.dashscope.aliyuncs.com/apps/anthropic'
-    : 'https://coding-intl.dashscope.aliyuncs.com/apps/anthropic';
+  if (apiUrlHint) {
+    console.log(`  ${COLOR.blue}API Key 获取地址: ${apiUrlHint}${COLOR.reset}`);
+  }
+  const apiKey = await askApiKey(rl, 'Coding Plan', '', existing.ANTHROPIC_API_KEY);
 
-  const existingKey = existing.MODEL_PROVIDER === 'aliyun-coding' ? existing.ANTHROPIC_API_KEY : '';
-  const apiKey = await askApiKey(rl, '阿里云百炼', 'https://bailian.console.aliyun.com/?tab=model#/api-key', existingKey);
-
+  // 3. 返回配置（使用「长时间自运行Agent」推荐配置）
   return {
     lines: [
       '# Claude Coder 模型配置',
-      '# 提供商: 阿里云 Coding Plan (百炼)',
-      '# Opus: glm-5 | Sonnet/Haiku: qwen3-coder-plus | Fallback: qwen3.5-plus',
+      '# 提供商: Coding Plan',
       '',
-      'MODEL_PROVIDER=aliyun-coding',
-      `ANTHROPIC_BASE_URL=${aliyunBaseUrl}`,
+      'MODEL_PROVIDER=coding-plan',
+      `ANTHROPIC_BASE_URL=${finalUrl}`,
       `ANTHROPIC_API_KEY=${apiKey}`,
       '',
-      'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1',
-      '# Planner (规划/推理) → glm-5',
+      '# 模型路由配置（可在 .claude-coder/.env 修改）',
       'ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5',
-      '# Executor (写代码/编辑/工具调用) → qwen3-coder-plus',
-      'ANTHROPIC_DEFAULT_SONNET_MODEL=qwen3-coder-plus',
+      'ANTHROPIC_DEFAULT_SONNET_MODEL=qwen3-coder-next',
       'ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen3-coder-plus',
-      'ANTHROPIC_SMALL_FAST_MODEL=qwen3-coder-plus',
-      '# Fallback (通用) → qwen3.5-plus',
-      'ANTHROPIC_MODEL=qwen3.5-plus',
+      'ANTHROPIC_MODEL=kimi-k2.5',
+      '',
       'API_TIMEOUT_MS=3000000',
       'MCP_TOOL_TIMEOUT=30000',
     ],
-    summary: '阿里云 Coding Plan (百炼)',
+    summary: `Coding Plan (${finalUrl})`,
   };
 }
 
-async function configureDeepSeek(rl, existing) {
+async function configureAPI(rl, existing) {
+  console.log('请选择 API 模式:');
+  console.log('');
+  console.log('  1) DeepSeek Chat (V3) - 速度快成本低 [推荐]');
+  console.log('  2) DeepSeek Reasoner (R1) - 全链路推理');
+  console.log('  3) DeepSeek Hybrid (R1+V3) - 规划用R1，执行用V3');
+  console.log('  4) 自定义 - 输入其他 API');
+  console.log('');
+  const choice = await askChoice(rl, '选择 [1-4，默认 1]: ', 1, 4, 1);
+
+  if (choice === 4) {
+    return await configureCustomAPI(rl, existing);
+  }
+
+  return await configureDeepSeekMode(rl, existing, choice);
+}
+
+async function configureDeepSeekMode(rl, existing, choice) {
   const existingKey = existing.MODEL_PROVIDER === 'deepseek' ? existing.ANTHROPIC_API_KEY : '';
   const apiKey = await askApiKey(rl, 'DeepSeek', 'https://platform.deepseek.com/api_keys', existingKey);
 
-  console.log('');
-  console.log('请选择 DeepSeek 模型:');
-  console.log('');
-  console.log('  1) deepseek-chat     - 通用对话 (V3)，速度快成本低 [推荐日常使用]');
-  console.log('  2) deepseek-reasoner - 纯推理模式 (R1)，全链路使用 R1，成本最高 [适合攻坚]');
-  console.log('  3) deepseek-hybrid   - 混合模式 (R1 + V3)，规划用 R1，执行用 V3 [性价比之选]');
-  console.log('');
-  const dsChoice = await askChoice(rl, '选择 [1-3，默认 1]: ', 1, 3, 1);
-  const dsModel = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-hybrid'][dsChoice - 1];
+  const dsModel = ['deepseek-chat', 'deepseek-reasoner', 'deepseek-hybrid'][choice - 1];
 
   const lines = [
     '# Claude Coder 模型配置',
@@ -203,7 +203,6 @@ async function configureDeepSeek(rl, existing) {
     lines.push(
       '# [DeepSeek Chat 降本策略]',
       'ANTHROPIC_MODEL=deepseek-chat',
-      'ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat',
       'ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-chat',
       'ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-chat',
       'ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-chat'
@@ -212,7 +211,6 @@ async function configureDeepSeek(rl, existing) {
     lines.push(
       '# [DeepSeek Pure Reasoner 模式]',
       'ANTHROPIC_MODEL=deepseek-reasoner',
-      'ANTHROPIC_SMALL_FAST_MODEL=deepseek-reasoner',
       'ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-reasoner',
       'ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-reasoner',
       'ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-reasoner'
@@ -222,7 +220,6 @@ async function configureDeepSeek(rl, existing) {
       '# [DeepSeek Hybrid 混合模式]',
       'ANTHROPIC_MODEL=deepseek-reasoner',
       'ANTHROPIC_DEFAULT_OPUS_MODEL=deepseek-reasoner',
-      'ANTHROPIC_SMALL_FAST_MODEL=deepseek-chat',
       'ANTHROPIC_DEFAULT_SONNET_MODEL=deepseek-chat',
       'ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-chat'
     );
@@ -233,29 +230,40 @@ async function configureDeepSeek(rl, existing) {
   return { lines, summary: `DeepSeek (${dsModel})` };
 }
 
-async function configureCustom(rl, existing) {
+async function configureCustomAPI(rl, existing) {
   const defaultUrl = existing.MODEL_PROVIDER === 'custom' ? existing.ANTHROPIC_BASE_URL || '' : '';
-  console.log(`请输入 Anthropic 兼容的 BASE_URL${defaultUrl ? `（回车保留: ${defaultUrl}）` : ''}:`);
-  let baseUrl = await ask(rl, '  URL: ');
+  console.log('请输入 Anthropic 兼容的 BASE_URL:');
+  let baseUrl = await ask(rl, `  URL${defaultUrl ? ` (回车保留: ${defaultUrl})` : ''}: `);
   baseUrl = baseUrl.trim() || defaultUrl;
-  console.log('');
+
+  if (!baseUrl) {
+    console.error('BASE_URL 不能为空');
+    process.exit(1);
+  }
 
   const existingKey = existing.MODEL_PROVIDER === 'custom' ? existing.ANTHROPIC_API_KEY : '';
-  const apiKey = await askApiKey(rl, '自定义平台', '', existingKey);
+  const apiKey = await askApiKey(rl, '自定义 API', '', existingKey);
 
-  return {
-    lines: [
-      '# Claude Coder 模型配置',
-      '# 提供商: 自定义',
-      '',
-      'MODEL_PROVIDER=custom',
-      `ANTHROPIC_BASE_URL=${baseUrl}`,
-      `ANTHROPIC_API_KEY=${apiKey}`,
-      'API_TIMEOUT_MS=3000000',
-      'MCP_TOOL_TIMEOUT=30000',
-    ],
-    summary: `自定义 (${baseUrl})`,
-  };
+  console.log('');
+  const modelInput = await ask(rl, '默认模型名称（回车跳过）: ');
+  const model = modelInput.trim();
+
+  const lines = [
+    '# Claude Coder 模型配置',
+    '# 提供商: 自定义 API',
+    '',
+    'MODEL_PROVIDER=custom',
+    `ANTHROPIC_BASE_URL=${baseUrl}`,
+    `ANTHROPIC_API_KEY=${apiKey}`,
+  ];
+
+  if (model) {
+    lines.push(`ANTHROPIC_MODEL=${model}`);
+  }
+
+  lines.push('API_TIMEOUT_MS=3000000', 'MCP_TOOL_TIMEOUT=30000');
+
+  return { lines, summary: `自定义 API (${baseUrl})` };
 }
 
 // === MCP 配置模块 ===
@@ -342,18 +350,16 @@ function showCurrentConfig(existing) {
 const PROVIDER_MENU = `
 请选择模型提供商:
 
-  1) Claude 官方
-  2) GLM Coding Plan (智谱/Z.AI)      ${COLOR.blue}https://open.bigmodel.cn${COLOR.reset}
-  3) 阿里云 Coding Plan (百炼)         ${COLOR.blue}https://bailian.console.aliyun.com${COLOR.reset}
-  4) DeepSeek                          ${COLOR.blue}https://platform.deepseek.com${COLOR.reset}
-  5) 自定义 (Anthropic 兼容)
+  1) 默认        Claude 官方模型，使用系统登录态
+  2) Coding Plan 自建 API，使用推荐的多模型路由配置
+  3) API         DeepSeek 或其他 Anthropic 兼容 API
 `;
 
-const PROVIDER_CONFIG = [configureClaude, configureGLM, configureAliyun, configureDeepSeek, configureCustom];
+const PROVIDER_CONFIG = [configureDefault, configureCodingPlan, configureAPI];
 
 async function selectProvider(rl, existing, showHeader = true) {
   if (showHeader) console.log(PROVIDER_MENU);
-  const choice = await askChoice(rl, '选择 [1-5]: ', 1, 5);
+  const choice = await askChoice(rl, '选择 [1-3]: ', 1, 3);
   console.log('');
   return PROVIDER_CONFIG[choice - 1](rl, existing);
 }
@@ -380,10 +386,9 @@ async function updateApiKeyOnly(rl, existing) {
   }
 
   const apiUrlMap = {
-    'glm-bigmodel': 'https://open.bigmodel.cn/usercenter/proj-mgmt/apikeys',
-    'glm-zai': 'https://z.ai/manage-apikey/apikey-list',
-    'aliyun-coding': 'https://bailian.console.aliyun.com/?tab=model#/api-key',
+    'coding-plan': '',
     'deepseek': 'https://platform.deepseek.com/api_keys',
+    'custom': '',
   };
 
   const apiKey = await askApiKey(rl, provider, apiUrlMap[provider] || '', existing.ANTHROPIC_API_KEY);

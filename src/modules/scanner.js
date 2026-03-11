@@ -1,8 +1,8 @@
 'use strict';
 
 const fs = require('fs');
-const { paths, log, ensureLoopDir } = require('./config');
-const { runScanSession } = require('./session');
+const { paths, log, ensureLoopDir } = require('../common/config');
+const { runScanSession } = require('../core/session');
 
 function validateProfile() {
   const p = paths();

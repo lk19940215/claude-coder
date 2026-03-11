@@ -40,11 +40,11 @@ function ensureLoopDir() {
 }
 
 function getTemplatePath(name) {
-  return path.join(__dirname, '..', 'templates', name);
+  return path.join(__dirname, '..', '..', 'templates', name);
 }
 
 function getPromptPath(name) {
-  return path.join(__dirname, '..', 'prompts', name);
+  return path.join(__dirname, '..', '..', 'templates', name);
 }
 
 function paths() {
@@ -69,12 +69,12 @@ function paths() {
     browserProfile:   path.join(runtime, 'browser-profile'),
     mcpConfig:        path.join(getProjectRoot(), '.mcp.json'),
     // Template files
-    claudeMd:            getPromptPath('CLAUDE.md'),
-    scanProtocol:        getPromptPath('SCAN_PROTOCOL.md'),
-    addGuide:            getPromptPath('ADD_GUIDE.md'),
-    codingUser:          getPromptPath('coding_user.md'),
-    scanUser:            getPromptPath('scan_user.md'),
-    addUser:             getPromptPath('add_user.md'),
+    claudeMd:            getPromptPath('agentProtocol.md'),
+    scanProtocol:        getPromptPath('scanProtocol.md'),
+    addGuide:            getPromptPath('addGuide.md'),
+    codingUser:          getPromptPath('codingUser.md'),
+    scanUser:            getPromptPath('scanUser.md'),
+    addUser:             getPromptPath('addUser.md'),
     testRuleTemplate:    getTemplatePath('test_rule.md'),
     guidanceTemplate:    getTemplatePath('guidance.json'),
     // Directories
@@ -117,7 +117,6 @@ function loadConfig() {
     playwrightMode: env.MCP_PLAYWRIGHT_MODE || 'persistent',
     disableNonessential: env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC || '',
     effortLevel: env.CLAUDE_CODE_EFFORT_LEVEL || '',
-    smallFastModel: env.ANTHROPIC_SMALL_FAST_MODEL || '',
     defaultOpus: env.ANTHROPIC_DEFAULT_OPUS_MODEL || '',
     defaultSonnet: env.ANTHROPIC_DEFAULT_SONNET_MODEL || '',
     defaultHaiku: env.ANTHROPIC_DEFAULT_HAIKU_MODEL || '',
@@ -131,18 +130,12 @@ function loadConfig() {
     raw: env,
   };
 
-  // GLM: default model if not set
-  if (config.baseUrl && (config.baseUrl.includes('bigmodel.cn') || config.baseUrl.includes('z.ai'))) {
-    if (!config.model) config.model = 'glm-4.7';
-  }
-
   // DeepSeek chat → haiku shim (prevent reasoner billing)
-  if (config.baseUrl.includes('deepseek') && config.model === 'deepseek-chat') {
+  if (config.baseUrl && config.baseUrl.includes('deepseek') && config.model === 'deepseek-chat') {
     config.model = 'claude-3-haiku-20240307';
     config.defaultOpus = 'claude-3-haiku-20240307';
     config.defaultSonnet = 'claude-3-haiku-20240307';
     config.defaultHaiku = 'claude-3-haiku-20240307';
-    config.smallFastModel = 'claude-3-haiku-20240307';
     config.thinkingBudget = '0';
   }
 
@@ -157,7 +150,6 @@ function buildEnvVars(config) {
   if (config.model) env.ANTHROPIC_MODEL = config.model;
   if (config.timeoutMs) env.API_TIMEOUT_MS = String(config.timeoutMs);
   if (config.mcpToolTimeout) env.MCP_TOOL_TIMEOUT = String(config.mcpToolTimeout);
-  if (config.smallFastModel) env.ANTHROPIC_SMALL_FAST_MODEL = config.smallFastModel;
   if (config.disableNonessential) env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = config.disableNonessential;
   if (config.effortLevel) env.CLAUDE_CODE_EFFORT_LEVEL = config.effortLevel;
   if (config.defaultOpus) env.ANTHROPIC_DEFAULT_OPUS_MODEL = config.defaultOpus;

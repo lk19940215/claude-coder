@@ -4,7 +4,7 @@ const fs = require('fs');
 const net = require('net');
 const http = require('http');
 const { spawn, execSync } = require('child_process');
-const { paths, log, getProjectRoot } = require('./config');
+const { paths, log, getProjectRoot } = require('../common/config');
 
 function loadProfile() {
   const p = paths();

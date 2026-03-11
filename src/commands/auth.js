@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execSync } = require('child_process');
-const { paths, loadConfig, log, getProjectRoot, ensureLoopDir } = require('./config');
+const { paths, loadConfig, log, getProjectRoot, ensureLoopDir } = require('../common/config');
 
 function updateGitignore(entry) {
   const gitignorePath = path.join(getProjectRoot(), '.gitignore');

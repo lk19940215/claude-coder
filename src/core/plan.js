@@ -4,8 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { loadSDK } = require('./session');
-const { paths, log } = require('./config');
-const { Indicator } = require('./indicator');
+const { paths, log } = require('../common/config');
+const { Indicator } = require('../common/indicator');
 
 const EXIT_TIMEOUT_MS = 30000;
 
@@ -51,8 +51,8 @@ function getUserInput(input) {
  */
 function buildPlanPrompt(userInput) {
   return `${userInput}
-【约束】不要提问，默认使用推荐方案。
-【重要】在最后输出中，必须包含实际写入的文件路径，格式如下：
+【约束】不要提问，默认使用最佳推荐方案。
+【重要】在最后输出中，必须包含实际方案文件的写入路径，格式如下：
 方案文件已写入：\`<实际路径>\`
 `;
 }

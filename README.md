@@ -78,11 +78,9 @@ claude-coder run "实现用户注册和登录功能"
 
 | 提供商 | 说明 |
 |--------|------|
-| Claude 官方 | 默认，Anthropic 原版 API |
-| GLM (智谱/Z.AI) | GLM 4.7 / GLM 5 |
-| 阿里云百炼 | qwen3-coder-plus / glm-5 |
-| DeepSeek | deepseek-chat / reasoner |
-| 自定义 | 任何 Anthropic 兼容 API |
+| 默认 | Claude 官方模型，使用系统登录态 |
+| Coding Plan | 自建 API，使用推荐的多模型路由配置 |
+| API | DeepSeek 或其他 Anthropic 兼容 API |
 
 ## 项目结构
 
@@ -131,8 +129,7 @@ your-project/
   ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5
   ANTHROPIC_DEFAULT_SONNET_MODEL=qwen3-coder-next
   ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen3-coder-plus
-  ANTHROPIC_SMALL_FAST_MODEL=MiniMax-M2.5
-  ANTHROPIC_MODEL=kimi-k2.5 // ANTHROPIC_MODEL=qwen3-max-2026-01-23
+  ANTHROPIC_MODEL=kimi-k2.5
   ```
 
 ### 自用 Claude Code（最强）
@@ -144,7 +141,6 @@ your-project/
   ANTHROPIC_DEFAULT_OPUS_MODEL=qwen3-max-2026-01-23
   ANTHROPIC_DEFAULT_SONNET_MODEL=qwen3-coder-next
   ANTHROPIC_DEFAULT_HAIKU_MODEL=qwen3-coder-plus
-  ANTHROPIC_SMALL_FAST_MODEL=MiniMax-M2.5
   ANTHROPIC_MODEL=glm-5
   ```
 

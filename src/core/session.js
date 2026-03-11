@@ -3,10 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { paths, loadConfig, buildEnvVars, getAllowedTools, log, getProjectRoot } = require('./config');
-const { Indicator } = require('./indicator');
+const { paths, loadConfig, buildEnvVars, getAllowedTools, log, getProjectRoot } = require('../common/config');
+const { Indicator } = require('../common/indicator');
 const { createHooks } = require('./hooks');
-const { buildSystemPrompt, buildCodingPrompt, buildScanPrompt, buildAddSystemPrompt, buildAddPrompt } = require('./prompts');
+const { buildSystemPrompt, buildCodingPrompt, buildScanPrompt, buildAddSystemPrompt, buildAddPrompt } = require('../modules/prompts');
 const { runPlanSession } = require('./plan');
 
 // ── SDK loader (cached, shared across sessions) ──

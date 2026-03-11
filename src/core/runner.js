@@ -4,10 +4,10 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const { execSync } = require('child_process');
-const { paths, log, COLOR, loadConfig, ensureLoopDir, getProjectRoot } = require('./config');
-const { loadTasks, getFeatures, getStats, findNextTask, forceStatus } = require('./tasks');
-const { validate } = require('./validator');
-const { scan } = require('./scanner');
+const { paths, log, COLOR, loadConfig, ensureLoopDir, getProjectRoot } = require('../common/config');
+const { loadTasks, getFeatures, getStats, findNextTask, forceStatus } = require('../modules/tasks');
+const { validate } = require('../commands/validator');
+const { scan } = require('../modules/scanner');
 const { loadSDK, runCodingSession, runAddSession } = require('./session');
 
 const MAX_RETRY = 3;

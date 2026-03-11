@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const { paths, log, COLOR } = require('./config');
+const { paths, log, COLOR } = require('../common/config');
 
 const VALID_STATUSES = ['pending', 'in_progress', 'testing', 'done', 'failed'];
 

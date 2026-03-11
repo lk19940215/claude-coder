@@ -1,8 +1,7 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
-const { paths, loadConfig, getProjectRoot } = require('./config');
+const { paths, loadConfig, getProjectRoot } = require('../common/config');
 const { loadTasks, findNextTask, getStats } = require('./tasks');
 
 // --------------- Template Engine ---------------
