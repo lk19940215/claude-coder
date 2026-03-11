@@ -2,7 +2,7 @@
 
 const { runSession } = require('./base');
 const { buildQueryOptions } = require('./utils');
-const { log, getProjectRoot } = require('../common/config');
+const { log, getProjectRoot, ensureLoopDir } = require('../common/config');
 const { execSync } = require('child_process');
 
 /**
@@ -46,6 +46,7 @@ async function _runSimplifySession(n = 3, opts = {}) {
  * 对外 API：代码审查
  */
 async function simplify(n = 3, opts = {}) {
+  ensureLoopDir();
   return _runSimplifySession(n, opts);
 }
 

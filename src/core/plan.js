@@ -7,9 +7,8 @@ const readline = require('readline');
 const { runSession } = require('./base');
 const { buildQueryOptions } = require('./utils');
 const { buildPlanSystemPrompt, buildPlanPrompt } = require('./prompts');
-const { paths, log, COLOR, loadConfig, getProjectRoot, ensureLoopDir } = require('../common/config');
+const { paths, log, loadConfig, getProjectRoot, ensureLoopDir } = require('../common/config');
 const { extractResultText } = require('../common/logging');
-const { scan } = require('./scan');
 const { loadTasks, getStats } = require('../common/tasks');
 
 const EXIT_TIMEOUT_MS = 30000;
@@ -230,18 +229,10 @@ async function run(input, opts = {}) {
   const displayModel = opts.model || config.model || '(default)';
   log('ok', `模型配置已加载: ${config.provider || 'claude'} (plan 使用: ${displayModel})`);
 
-  // 5. 首次使用扫描
+  // 5. 检查前置条件
   if (!fs.existsSync(p.profile)) {
-    log('info', '首次使用，正在执行项目扫描...');
-    const scanResult = await scan(instruction, { projectRoot });
-    if (!scanResult.success) {
-      console.log('');
-      console.log(`${COLOR.yellow}═══════════════════════════════════════════════${COLOR.reset}`);
-      console.log(`${COLOR.yellow}  若出现 "Credit balance is too low"，请运行:${COLOR.reset}`);
-      console.log(`  ${COLOR.green}claude-coder setup${COLOR.reset}`);
-      console.log(`${COLOR.yellow}═══════════════════════════════════════════════${COLOR.reset}`);
-      process.exit(1);
-    }
+    log('error', 'profile 不存在，请先运行 claude-coder init 初始化项目');
+    process.exit(1);
   }
 
   // 6. 用户交互（非 planOnly 模式）
@@ -251,17 +242,19 @@ async function run(input, opts = {}) {
   }
 
   // 7. 执行
-  await runPlanSession(instruction, { projectRoot, ...opts });
+  const result = await runPlanSession(instruction, { projectRoot, ...opts });
 
-  // 8. 显示统计
-  printStats();
+  // 8. 显示统计（成功时）
+  if (result.success) {
+    printStats();
 
-  // 9. 自动运行（非 planOnly 模式）
-  if (shouldAutoRun) {
-    console.log('');
-    log('info', '开始自动执行任务...');
-    const { run: runCoding } = require('./runner');
-    await runCoding(opts);
+    // 9. 自动运行（非 planOnly 模式）
+    if (shouldAutoRun) {
+      console.log('');
+      log('info', '开始自动执行任务...');
+      const { run: runCoding } = require('./runner');
+      await runCoding(opts);
+    }
   }
 }
 

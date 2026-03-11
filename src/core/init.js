@@ -5,7 +5,7 @@ const path = require('path');
 const net = require('net');
 const http = require('http');
 const { spawn, execSync } = require('child_process');
-const { paths, log, getProjectRoot } = require('../common/config');
+const { paths, log, getProjectRoot, ensureLoopDir } = require('../common/config');
 const { scan } = require('./scan');
 
 function loadProfile() {
@@ -85,6 +85,7 @@ function deployGuidanceFiles(p) {
 async function init() {
   const p = paths();
   const projectRoot = getProjectRoot();
+  ensureLoopDir();
 
   // 如果 profile 不存在，先执行扫描
   if (!fs.existsSync(p.profile)) {

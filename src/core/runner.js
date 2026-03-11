@@ -161,12 +161,12 @@ async function run(opts = {}) {
 
   // 检查前置条件
   if (!fs.existsSync(p.profile)) {
-    log('error', 'profile.json 不存在，请先运行 claude-coder add 添加任务');
+    log('error', 'profile 不存在，请先运行 claude-coder init 初始化项目');
     process.exit(1);
   }
 
   if (!fs.existsSync(p.tasksFile)) {
-    log('error', 'tasks.json 不存在，请先运行 claude-coder add 添加任务');
+    log('error', 'tasks.json 不存在，请先运行 claude-coder plan 生成任务');
     process.exit(1);
   }
 
