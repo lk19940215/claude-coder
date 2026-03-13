@@ -37,7 +37,7 @@
         "在 global.css 添加新配色变量：--fish-gold、--lazy-cyan、.text-glow 类",
         "Playwright MCP 访问首页，验证动画效果流畅、文字在深色背景下清晰可见"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-007"]
     },
     {

@@ -2,5 +2,5 @@
   "session_result": "success",
   "status_before": "pending",
   "status_after": "done",
-  "notes": "Session 5 - feat-009 完成：验证页面重复 Header/Footer 问题。\n\n发现：代码检查发现所有页面组件（Home.tsx、Features.tsx、QuickStart.tsx、Docs.tsx、Examples.tsx）均未引入 Header/Footer，布局由 App.tsx 统一管理，架构正确。\n\n验证结果：Playwright MCP 遍历所有 5 个页面，每个页面都只有一个 Header（banner）和一个 Footer（contentinfo），无重复渲染。\n\n结论：feat-009 任务已完成，无需代码修改。"
+  "notes": "Session 6 完成 feat-010：在 Examples.tsx 添加了第 5 个示例卡片'AI 教学 PPT 生成器'，包含 repo 链接字段指向 https://github.com/lk19940215/ai-teaching-ppt，并在卡片组件中添加了 GitHub 仓库链接按钮。Playwright MCP 验证通过：页面正确显示 5 个示例卡片，新卡片包含'查看仓库'按钮且链接正确。修复了 tests.json 中的 JSON 语法错误（feat-001 后缺少逗号）。开发服务器运行在端口 5183，连续模式保持运行。"
 }

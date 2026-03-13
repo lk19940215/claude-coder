@@ -34,6 +34,10 @@
 
   /* 错误红 */
   --error-500: #ef4444;
+
+  /* 摸鱼主题配色 */
+  --fish-gold: #fbbf24;
+  --lazy-cyan: #22d3ee;
 }
 
 .dark {
@@ -159,4 +163,88 @@ body {
   font-family: 'Fira Code', monospace;
   font-size: 0.875rem;
   line-height: 1.6;
+}
+
+/* ========== 摸鱼主题动画与特效 ========== */
+
+/* 文字发光效果 */
+.text-glow {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5),
+               0 0 20px rgba(34, 211, 238, 0.3),
+               0 0 30px rgba(34, 211, 238, 0.2);
+}
+
+/* 渐变色文字流动动画 */
+.gradient-flow-text {
+  background: linear-gradient(90deg, var(--fish-gold), var(--lazy-cyan), var(--gradient-end), var(--fish-gold));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientFlow 4s ease infinite;
+}
+
+/* 淡入上移动画 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* 闪烁动画（用于摸鱼神器标签） */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.85;
+    filter: brightness(1.2);
+  }
+}
+
+.animate-blink {
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* 渐变流动动画（背景） */
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-flow {
+  animation: gradientFlow 4s ease infinite;
+}
+
+/* 悬浮卡片动画增强 */
+.card-fish {
+  background: linear-gradient(var(--bg-200), var(--bg-200)) padding-box,
+              linear-gradient(135deg, var(--fish-gold), var(--lazy-cyan)) border-box;
+  border: 2px solid transparent;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.card-fish:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 10px 40px rgba(34, 211, 238, 0.2),
+              0 0 60px rgba(251, 191, 36, 0.1);
 }
