@@ -2,7 +2,7 @@
 export default {
   content: [
     './index.html',
-    './src/**/*.{vue,js,ts,jsx,tsx}',
+    './src/**/*.{ts,tsx}',
   ],
   darkMode: 'class',
   theme: {

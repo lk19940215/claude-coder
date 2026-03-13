@@ -49,7 +49,7 @@
         "转换 Examples.vue 为 Examples.tsx",
         "Playwright MCP 依次访问 /features、/quickstart、/docs、/examples，验证页面内容"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-005"]
     },
     {
@@ -63,7 +63,7 @@
         "执行 npm run build，验证构建无错误",
         "Playwright MCP 完整遍历所有路由，验证功能与样式一致性"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-006"]
     }
   ]
