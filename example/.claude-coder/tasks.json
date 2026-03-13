@@ -17,7 +17,7 @@
       "depends_on": []
     },
     {
-      {"id": "feat-002",
+      "id": "feat-002",
       "category": "frontend",
       "priority": 2,
       "description": "搭建 React 18 + TypeScript 开发环境",
