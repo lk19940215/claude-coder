@@ -1,6 +1,4 @@
 import React from 'react';
-import Header from '../components/common/Header';
-import Footer from '../components/common/Footer';
 
 const examples = [
   {
@@ -37,7 +35,6 @@ claude-coder add -r  # 同步新任务`,
 const Examples: React.FC = () => {
   return (
     <div className="min-h-screen">
-      <Header />
       <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold text-[var(--text-50)] mb-4">使用案例</h1>
@@ -62,7 +59,6 @@ const Examples: React.FC = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

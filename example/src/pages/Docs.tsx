@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import Header from '../components/common/Header';
-import Footer from '../components/common/Footer';
 
 const docs = [
   { id: 'getting-started', title: '入门指南' },
@@ -15,7 +13,6 @@ const Docs: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
       <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -132,7 +129,6 @@ const Docs: React.FC = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

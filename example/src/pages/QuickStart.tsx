@@ -1,11 +1,8 @@
 import React from 'react';
-import Header from '../components/common/Header';
-import Footer from '../components/common/Footer';
 
 const QuickStart: React.FC = () => {
   return (
     <div className="min-h-screen">
-      <Header />
       <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-4xl font-bold text-[var(--text-50)] mb-4">快速上手</h1>
@@ -104,7 +101,6 @@ claude-coder plan -i "需求描述"`}</pre>
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

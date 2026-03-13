@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import Header from '../components/common/Header';
-import Footer from '../components/common/Footer';
 
 const sections = [
   { id: 'hook', title: 'Hook 提示注入' },
@@ -14,7 +12,6 @@ const Features: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <Header />
       <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold text-[var(--text-50)] mb-8">功能特性</h1>
@@ -103,7 +100,6 @@ claude-coder auth http://localhost:3000`}</pre>
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };
