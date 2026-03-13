@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const quickLinks = [
   { label: '功能特性', path: '/features' },
   { label: '文档', path: '/docs' },
-  { label: 'GitHub', href: 'https://github.com', external: true },
+  { label: 'GitHub', href: 'https://github.com/lk19940215/claude-coder', external: true },
   { label: '使用案例', path: '/examples' },
 ];
 
