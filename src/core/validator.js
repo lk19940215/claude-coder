@@ -107,24 +107,6 @@ function checkGitProgress(headBefore) {
   return { hasCommit: true, warning: false };
 }
 
-function checkTestCoverage(taskId, statusAfter) {
-  if (statusAfter !== 'done' || !taskId) return;
-  if (!assets.exists('tests')) return;
-
-  const tests = assets.readJson('tests', null);
-  if (!tests) return;
-  const testCases = tests.test_cases || [];
-  const taskTests = testCases.filter(t => t.feature_id === taskId);
-  if (taskTests.length > 0) {
-    const failed = taskTests.filter(t => t.last_result === 'fail');
-    if (failed.length > 0) {
-      log('warn', `tests.json 中有失败的验证记录: ${failed.map(t => t.id).join(', ')}`);
-    } else {
-      log('ok', `${taskTests.length} 条验证记录覆盖任务 ${taskId}`);
-    }
-  }
-}
-
 function validate(headBefore, taskId) {
   log('info', '========== 开始校验 ==========');
 
@@ -150,9 +132,6 @@ function validate(headBefore, taskId) {
       fatal = true;
     }
   }
-
-  const statusAfter = srResult.data?.status_after || inferFromTasks(taskId) || null;
-  checkTestCoverage(taskId, statusAfter);
 
   if (fatal) {
     log('error', '========== 校验失败 (致命) ==========');

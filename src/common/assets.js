@@ -10,13 +10,18 @@ const BUNDLED_DIR = path.join(__dirname, '..', '..', 'templates');
 // kind: 'runtime'  — .claude-coder/.runtime/ 目录，无缓存
 // kind: 'root'     — 项目根目录，无缓存
 const REGISTRY = new Map([
-  // Templates
-  ['agentProtocol',  { file: 'agentProtocol.md',          kind: 'template' }],
-  ['scanProtocol',   { file: 'scanProtocol.md',           kind: 'template' }],
-  ['addGuide',       { file: 'addGuide.md',               kind: 'template' }],
+  // System Prompt Templates (per session type)
+  ['coreProtocol',   { file: 'coreProtocol.md',            kind: 'template' }],
+  ['codingSystem',   { file: 'codingSystem.md',            kind: 'template' }],
+  ['scanSystem',     { file: 'scanSystem.md',              kind: 'template' }],
+
+  // User Prompt Templates
   ['codingUser',     { file: 'codingUser.md',              kind: 'template' }],
   ['scanUser',       { file: 'scanUser.md',                kind: 'template' }],
   ['addUser',        { file: 'addUser.md',                 kind: 'template' }],
+  ['addGuide',       { file: 'addGuide.md',                kind: 'template' }],
+
+  // Other Templates
   ['testRule',       { file: 'test_rule.md',               kind: 'template' }],
   ['guidance',       { file: 'guidance.json',              kind: 'template' }],
   ['playwright',     { file: 'playwright.md',              kind: 'template' }],
@@ -29,11 +34,11 @@ const REGISTRY = new Map([
   ['progress',       { file: 'progress.json',              kind: 'data' }],
   ['sessionResult',  { file: 'session_result.json',        kind: 'data' }],
   ['profile',        { file: 'project_profile.json',       kind: 'data' }],
-  ['tests',          { file: 'tests.json',                 kind: 'data' }],
   ['testEnv',        { file: 'test.env',                   kind: 'data' }],
   ['playwrightAuth', { file: 'playwright-auth.json',       kind: 'data' }],
 
   // Runtime files (.claude-coder/.runtime/)
+  ['harnessState',   { file: 'harness_state.json',         kind: 'runtime' }],
   ['browserProfile', { file: 'browser-profile',            kind: 'runtime' }],
 
   // Root files (project root)

@@ -28,7 +28,6 @@ const FILES = Object.freeze({
   TASKS: 'tasks.json',
   PROFILE: 'project_profile.json',
   PROGRESS: 'progress.json',
-  TESTS: 'tests.json',
   TEST_ENV: 'test.env',
   PLAYWRIGHT_AUTH: 'playwright-auth.json',
   ENV: '.env',

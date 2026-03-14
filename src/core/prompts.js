@@ -1,21 +1,31 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const { loadConfig } = require('../common/config');
 const { assets } = require('../common/assets');
 const { loadTasks, findNextTask, getStats } = require('../common/tasks');
+const { loadState } = require('../common/state');
 
 // --------------- System Prompt ---------------
 
-function buildSystemPrompt(includeScanProtocol = false) {
-  let prompt = assets.read('agentProtocol');
-  if (includeScanProtocol) {
-    const scan = assets.read('scanProtocol');
-    if (scan) prompt += '\n\n' + scan;
+function buildSystemPrompt(type) {
+  const core = assets.read('coreProtocol') || '';
+  let specific = '';
+  switch (type) {
+    case 'scan':    specific = assets.read('scanSystem') || ''; break;
+    case 'coding':  specific = assets.read('codingSystem') || ''; break;
   }
-  return prompt;
+  return specific ? `${core}\n\n${specific}` : core;
 }
 
 // --------------- Hint Builders ---------------
+
+function buildRequirementsHint() {
+  const reqPath = path.join(assets.projectRoot, 'requirements.md');
+  if (!fs.existsSync(reqPath)) return '';
+  return `需求文档: ${reqPath}。第一步先读取，了解用户的技术约束和偏好。`;
+}
 
 function buildMcpHint(config) {
   return config.mcpPlaywright
@@ -33,15 +43,6 @@ function buildRetryHint(consecutiveFailures, lastValidateLog) {
 function buildEnvHint(consecutiveFailures, sessionNum) {
   if (consecutiveFailures === 0 && sessionNum > 1) {
     return '环境已就绪，第二步可跳过 claude-coder init，仅确认服务存活。涉及新依赖时仍需运行 claude-coder init。';
-  }
-  return '';
-}
-
-function buildTestHint() {
-  const testsData = assets.readJson('tests', null);
-  if (testsData) {
-    const count = (testsData.test_cases || []).length;
-    if (count > 0) return `tests.json 已有 ${count} 条验证记录，Step 5 时先查已有记录避免重复验证。`;
   }
   return '';
 }
@@ -107,11 +108,10 @@ function buildPlaywrightAuthHint(config) {
 
 function buildMemoryHint() {
   const sr = assets.readJson('sessionResult', null);
-  if (sr?.session_result) {
-    return `上次会话: ${sr.session_result}（${sr.status_before || '?'} → ${sr.status_after || '?'}）` +
-      (sr.notes ? `, 要点: ${sr.notes.slice(0, 150)}` : '') + '。';
-  }
-  return '';
+  if (!sr?.session_result) return '';
+  const base = `上次会话 ${sr.session_result}（${sr.status_before || '?'} → ${sr.status_after || '?'}）。`;
+  if (!sr.notes || !sr.notes.trim()) return base;
+  return `${base}遗留: ${sr.notes.slice(0, 200)}`;
 }
 
 function buildServiceHint(maxSessions) {
@@ -120,19 +120,22 @@ function buildServiceHint(maxSessions) {
     : '连续模式：收尾时不要停止后台服务，保持服务运行以便下个 session 继续使用。';
 }
 
-// --------------- Coding Session ---------------
+// --------------- Context Builders ---------------
 
-function buildCodingPrompt(sessionNum, opts = {}) {
+/**
+ * 构建 coding session 的完整上下文（user prompt）
+ */
+function buildCodingContext(sessionNum, opts = {}) {
   const config = loadConfig();
   const consecutiveFailures = opts.consecutiveFailures || 0;
   const projectRoot = assets.projectRoot;
 
   return assets.render('codingUser', {
     sessionNum,
+    requirementsHint: buildRequirementsHint(),
     mcpHint: buildMcpHint(config),
     retryContext: buildRetryHint(consecutiveFailures, opts.lastValidateLog),
     envHint: buildEnvHint(consecutiveFailures, sessionNum),
-    testHint: buildTestHint(),
     docsHint: buildDocsHint(),
     taskHint: buildTaskHint(projectRoot),
     testEnvHint: buildTestEnvHint(projectRoot),
@@ -144,15 +147,8 @@ function buildCodingPrompt(sessionNum, opts = {}) {
 
 // --------------- Scan Session ---------------
 
-function buildScanPrompt(projectType, requirement) {
-  const requirementLine = requirement
-    ? `用户需求概述: ${requirement.slice(0, 500)}`
-    : '';
-
-  return assets.render('scanUser', {
-    projectType,
-    requirement: requirementLine,
-  });
+function buildScanPrompt(projectType) {
+  return assets.render('scanUser', { projectType });
 }
 
 // --------------- Plan Session ---------------
@@ -183,12 +179,12 @@ function buildPlanPrompt(planPath) {
     if (taskData) {
       const stats = getStats(taskData);
       const features = taskData.features || [];
-      const maxId = features.length ? features[features.length - 1].id : 'feat-000';
-      const maxPriority = features.length ? Math.max(...features.map(f => f.priority || 0)) : 0;
+      const state = loadState();
+      const nextId = `feat-${String(state.next_task_id).padStart(3, '0')}`;
       const categories = [...new Set(features.map(f => f.category))].join(', ');
 
       taskContext = `已有 ${stats.total} 个任务（${stats.done} done, ${stats.pending} pending, ${stats.failed} failed）。` +
-        `最大 id: ${maxId}, 最大 priority: ${maxPriority}。已有 category: ${categories}。`;
+        `新任务 ID 从 ${nextId} 开始，priority 从 ${state.next_priority} 开始。已有 category: ${categories}。`;
 
       const recent = features.slice(-3);
       if (recent.length) {
@@ -219,7 +215,7 @@ function buildPlanPrompt(planPath) {
 
 module.exports = {
   buildSystemPrompt,
-  buildCodingPrompt,
+  buildCodingContext,
   buildScanPrompt,
   buildPlanSystemPrompt,
   buildPlanPrompt,

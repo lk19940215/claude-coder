@@ -2,7 +2,7 @@
 
 const { runSession } = require("./base");
 const { buildQueryOptions } = require("./query");
-const { buildSystemPrompt, buildCodingPrompt } = require("./prompts");
+const { buildSystemPrompt, buildCodingContext } = require("./prompts");
 const { extractResult } = require("../common/logging");
 const { log } = require("../common/config");
 
@@ -20,9 +20,9 @@ async function runCodingSession(sessionNum, opts = {}) {
     label: `coding task=${taskId}`,
 
     async execute(sdk, ctx) {
-      const prompt = buildCodingPrompt(sessionNum, opts);
+      const prompt = buildCodingContext(sessionNum, opts);
       const queryOpts = buildQueryOptions(ctx.config, opts);
-      queryOpts.systemPrompt = buildSystemPrompt(false);
+      queryOpts.systemPrompt = buildSystemPrompt('coding');
       queryOpts.hooks = ctx.hooks;
       queryOpts.abortController = ctx.abortController;
       queryOpts.disallowedTools = ['askUserQuestion'];

@@ -110,3 +110,8 @@ template/
 ## 其它问题
 - 基于这个claude Agent SDK,再封装，会不会多此一举？
 - 中断的时候，不直接中断，总结一个上下文传给下一个 session?
+
+# 文章参考
+
+[文章1](https://api.github.com/repos/anthropics/claude-quickstarts/contents/autonomous-coding)
+[文章1](https://raw.githubusercontent.com/anthropics/claude-quickstarts/main/autonomous-coding/prompts.py)

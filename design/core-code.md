@@ -50,14 +50,15 @@ runner.run(opts)                                    ← src/core/runner.js
 runCodingSession(sessionNum, opts)                  ← src/core/coding.js
 └── runSession('coding', { execute })               → [base.runSession 展开]
     └── execute(sdk, ctx):
-        ├── buildCodingPrompt(sessionNum, opts)     ← core/prompts
+        ├── buildCodingContext(sessionNum, opts)     ← core/prompts
         │   ├── loadTasks() → findNextTask()
-        │   ├── buildMcpHint / RetryHint / EnvHint / TestHint / DocsHint
-        │   ├── buildTaskHint / TestEnvHint / PlaywrightAuthHint
+        │   ├── buildRequirementsHint / McpHint / RetryHint / EnvHint
+        │   ├── buildDocsHint / TaskHint / TestEnvHint / PlaywrightAuthHint
+        │   ├── buildMemoryHint / ServiceHint
         │   └── assets.render('codingUser', vars)
         ├── buildQueryOptions(config, opts)          ← core/query
-        ├── buildSystemPrompt(false)                 ← core/prompts
-        │   └── assets.render('agentProtocol')
+        ├── buildSystemPrompt('coding')              ← core/prompts
+        │   └── coreProtocol.md + codingSystem.md
         ├── ctx.runQuery(sdk, prompt, queryOpts)     → [context.runQuery 展开]
         └── extractResult(collected)                 ← common/logging
 ```
@@ -90,10 +91,11 @@ plan.run(input, opts)                               ← src/core/plan.js
 │           │ Phase 2: 任务分解（除非 --planOnly）
 │           ├── buildPlanPrompt(planPath)             ← core/prompts
 │           │   ├── assets.readJson('profile')
-│           │   ├── loadTasks(), getStats()
+│           │   ├── loadTasks(), getStats(), loadState()
 │           │   └── assets.render('addUser', vars)
 │           ├── buildQueryOptions()
-│           └── ctx.runQuery(sdk, tasksPrompt, ...)   → 模型生成 tasks.json
+│           ├── ctx.runQuery(sdk, tasksPrompt, ...)   → 模型生成 tasks.json
+│           └── syncAfterPlan()                       ← common/state
 │
 ├── printStats()
 └── [auto-run] → promptAutoRun() → runner.run(opts)
@@ -245,14 +247,15 @@ validate(headBefore, taskId)                        ← src/core/validator.js
 ## scan — 项目扫描
 
 ```
-scan(requirement, opts)                             ← src/core/scan.js
+scan(opts)                                          ← src/core/scan.js
 ├── retry loop (max 3):
-│   └── _runScanSession(requirement, opts)
+│   └── _runScanSession(opts)
 │       └── runSession('scan', { execute })          → [base.runSession]
 │           └── execute(sdk, ctx):
-│               ├── buildScanPrompt(projectType, requirement)
+│               ├── buildScanPrompt(projectType)
 │               ├── buildQueryOptions()
-│               ├── buildSystemPrompt(true)
+│               ├── buildSystemPrompt('scan')
+│               │   └── coreProtocol.md + scanSystem.md
 │               └── ctx.runQuery(sdk, prompt, opts)
 └── validateProfile()
     └── 检查 profile 结构: tech_stack, services
@@ -277,7 +280,7 @@ simplify(focus, opts)                               ← src/core/simplify.js
 
 ```
 common/
-├── config.js      loadConfig, buildEnvVars, getAllowedTools, log, updateEnvVar
+├── config.js      loadConfig, buildEnvVars, log, updateEnvVar
 ├── assets.js      AssetManager: init, read, readJson, writeJson, render, dir, ensureDirs
 ├── indicator.js   Indicator, inferPhaseStep
 ├── logging.js     logMessage, extractResult, extractResultText, writeSessionSeparator

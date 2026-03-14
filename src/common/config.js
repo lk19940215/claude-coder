@@ -98,19 +98,6 @@ function buildEnvVars(config) {
   return env;
 }
 
-// --------------- Allowed tools ---------------
-
-function getAllowedTools(config) {
-  const tools = [
-    'Read', 'Edit', 'MultiEdit', 'Write',
-    'Bash', 'Glob', 'Grep', 'LS',
-    'Task',
-    'WebSearch', 'WebFetch',
-  ];
-  if (config.mcpPlaywright) tools.push('mcp__playwright__*');
-  return tools;
-}
-
 function updateEnvVar(key, value) {
   const { assets } = require('./assets');
   const envPath = assets.path('env');
@@ -133,6 +120,5 @@ module.exports = {
   parseEnvFile,
   loadConfig,
   buildEnvVars,
-  getAllowedTools,
   updateEnvVar,
 };

@@ -65,7 +65,7 @@ async function init() {
 
   if (!assets.exists('profile')) {
     log('info', 'profile 不存在，正在执行项目扫描...');
-    const scanResult = await scan('', { projectRoot });
+    const scanResult = await scan({ projectRoot });
     if (!scanResult.success) {
       log('error', '项目扫描失败');
       process.exit(1);

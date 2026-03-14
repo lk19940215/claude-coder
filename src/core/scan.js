@@ -28,7 +28,7 @@ function validateProfile() {
   return { valid: issues.length === 0, issues };
 }
 
-async function _runScanSession(requirement, opts = {}) {
+async function _runScanSession(opts = {}) {
   const projectType = hasCodeFiles(opts.projectRoot || assets.projectRoot) ? 'existing' : 'new';
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
@@ -41,9 +41,9 @@ async function _runScanSession(requirement, opts = {}) {
     async execute(sdk, ctx) {
       log('info', `正在调用 Claude Code 执行项目扫描（${projectType}项目）...`);
 
-      const prompt = buildScanPrompt(projectType, requirement);
+      const prompt = buildScanPrompt(projectType);
       const queryOpts = buildQueryOptions(ctx.config, opts);
-      queryOpts.systemPrompt = buildSystemPrompt(true);
+      queryOpts.systemPrompt = buildSystemPrompt('scan');
       queryOpts.hooks = ctx.hooks;
       queryOpts.abortController = ctx.abortController;
 
@@ -55,14 +55,14 @@ async function _runScanSession(requirement, opts = {}) {
   });
 }
 
-async function scan(requirement, opts = {}) {
+async function scan(opts = {}) {
   assets.ensureDirs();
 
   const maxAttempts = RETRY.SCAN_ATTEMPTS;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     log('info', `初始化尝试 ${attempt} / ${maxAttempts} ...`);
 
-    const result = await _runScanSession(requirement, opts);
+    const result = await _runScanSession(opts);
 
     if (assets.exists('profile')) {
       const profileCheck = validateProfile();

@@ -1,7 +1,7 @@
 Session {{sessionNum}}。执行 6 步流程。
 效率要求：先规划后编码，完成全部编码后再统一测试，禁止编码-测试反复跳转。后端任务用 curl 验证，不启动浏览器。
+{{requirementsHint}}
 {{mcpHint}}
-{{testHint}}
 {{docsHint}}
 {{envHint}}
 {{taskHint}}

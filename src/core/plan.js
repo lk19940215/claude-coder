@@ -11,6 +11,7 @@ const { log, loadConfig } = require('../common/config');
 const { assets } = require('../common/assets');
 const { extractResultText } = require('../common/logging');
 const { printStats } = require('../common/tasks');
+const { syncAfterPlan } = require('../common/state');
 
 const EXIT_TIMEOUT_MS = 300000;
 const PLANS_DIR = path.join(os.homedir(), '.claude', 'plans');
@@ -227,6 +228,7 @@ async function runPlanSession(instruction, opts = {}) {
 
       await ctx.runQuery(sdk, tasksPrompt, queryOpts);
 
+      syncAfterPlan();
       log('ok', '任务追加完成');
       return { success: true, planPath: planResult.targetPath };
     },

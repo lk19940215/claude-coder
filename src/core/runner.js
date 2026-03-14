@@ -8,6 +8,7 @@ const { assets } = require('../common/assets');
 const { getGitHead, isGitRepo, sleep } = require('../common/utils');
 const { RETRY } = require('../common/constants');
 const { loadTasks, getFeatures, getStats, findNextTask, forceStatus, printStats } = require('../common/tasks');
+const { incrementSession, markSimplifyDone, needsFinalSimplify } = require('../common/state');
 const { validate } = require('./validator');
 const { runCodingSession } = require('./coding');
 const { simplify } = require('./simplify');
@@ -181,6 +182,21 @@ async function run(opts = {}) {
 
     const features = getFeatures(taskData);
     if (features.length > 0 && features.every(f => f.status === 'done')) {
+      if (!dryRun) {
+        const simplifyInterval = config.simplifyInterval;
+        if (simplifyInterval > 0 && needsFinalSimplify()) {
+          log('info', '所有任务完成，运行最终代码审查...');
+          await simplify(null, { n: config.simplifyCommits });
+          markSimplifyDone();
+          try {
+            execSync('git diff --quiet HEAD', { cwd: projectRoot, stdio: 'pipe' });
+          } catch {
+            execSync('git add -A && git commit -m "style: final simplify"', { cwd: projectRoot, stdio: 'pipe' });
+            log('ok', '最终代码优化已提交');
+          }
+          tryPush();
+        }
+      }
       console.log('');
       log('ok', '所有任务已完成！');
       printStats();
@@ -249,17 +265,17 @@ async function run(opts = {}) {
         log('ok', `Session ${session} 校验通过`);
       }
 
-      // 定期运行 simplify 代码审查
+      incrementSession();
+
       const simplifyInterval = config.simplifyInterval;
       if (simplifyInterval > 0 && session % simplifyInterval === 0) {
         log('info', `每 ${simplifyInterval} 个 session 运行代码审查...`);
         await simplify(null, { n: config.simplifyCommits });
+        markSimplifyDone();
 
-        // 检查是否有代码变更
         try {
           execSync('git diff --quiet HEAD', { cwd: projectRoot, stdio: 'pipe' });
         } catch {
-          // 有变更，自动提交
           execSync('git add -A && git commit -m "style: simplify optimization"', { cwd: projectRoot, stdio: 'pipe' });
           log('ok', '代码优化已提交');
         }

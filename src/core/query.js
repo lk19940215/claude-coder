@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { buildEnvVars, getAllowedTools } = require('../common/config');
+const { buildEnvVars } = require('../common/config');
 const { assets } = require('../common/assets');
 
 /**
@@ -29,7 +29,6 @@ function hasCodeFiles(projectRoot) {
  */
 function buildQueryOptions(config, opts = {}) {
   const base = {
-    allowedTools: getAllowedTools(config),
     permissionMode: 'bypassPermissions',
     allowDangerouslySkipPermissions: true,
     cwd: opts.projectRoot || assets.projectRoot,
