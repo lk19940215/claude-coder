@@ -31,6 +31,7 @@ async function _runSimplifySession(n = 3, focus = null, opts = {}) {
       const queryOpts = buildQueryOptions(ctx.config, opts);
       queryOpts.hooks = ctx.hooks;
       queryOpts.abortController = ctx.abortController;
+      queryOpts.disallowedTools = ['askUserQuestion'];
 
       await ctx.runQuery(sdk, prompt, queryOpts);
       log('ok', '代码审查完成');

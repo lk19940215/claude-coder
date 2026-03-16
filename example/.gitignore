@@ -7,3 +7,4 @@
 dist/
 
 .env/
+.claude-coder/.runtime/browser-profile
