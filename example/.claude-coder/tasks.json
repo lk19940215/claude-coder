@@ -73,7 +73,7 @@
         "添加 ESC 键关闭监听",
         "验证: Hooks 在组件中正常工作，无内存泄漏"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-003"]
     },
     {
