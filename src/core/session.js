@@ -152,6 +152,14 @@ class Session {
    * @returns {Promise<QueryResult>}
    */
   async runQuery(prompt, queryOpts, opts = {}) {
+    if (this.logStream?.writable) {
+      const sep = '-'.repeat(40);
+      if (queryOpts.systemPrompt) {
+        this.logStream.write(`\n${sep}\n[SYSTEM_PROMPT]\n${sep}\n${queryOpts.systemPrompt}\n`);
+      }
+      this.logStream.write(`\n${sep}\n[USER_PROMPT]\n${sep}\n${prompt}\n${sep}\n\n`);
+    }
+
     const sdk = Session._sdk;
     const messages = [];
     const querySession = sdk.query({ prompt, options: queryOpts });

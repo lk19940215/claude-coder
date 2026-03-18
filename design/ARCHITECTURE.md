@@ -207,7 +207,7 @@ claude-coder/
 │   │   └── init.js               # 环境初始化：依赖安装、服务启动
 │   └── commands/                 # CLI 命令实现
 │       ├── setup.js              # 交互式配置：模型选择、API Key、MCP 工具
-│       └── auth.js               # Playwright 凭证：导出登录状态 + MCP 配置
+│       └── auth.js               # 浏览器凭证：Playwright 登录态导出 / Chrome DevTools 远程调试配置
 ├── types/
 │   └── index.d.ts                # TypeScript 类型声明
 ├── templates/                    # Prompt 模板目录
@@ -219,8 +219,8 @@ claude-coder/
 │   ├── codingUser.md             # 编码 session 用户 prompt 模板
 │   ├── scanUser.md               # 扫描 session 用户 prompt 模板
 │   ├── planUser.md               # 任务分解用户 prompt 模板
-│   ├── guidance.json             # Hook 注入规则（Playwright、Bash 进程管理）
-│   ├── playwright.md             # Playwright MCP 使用指南
+│   ├── guidance.json             # Hook 注入规则（Playwright / Chrome DevTools、Bash 进程管理）
+│   ├── web-testing.md            # 浏览器测试通用规则（Playwright / Chrome DevTools 共用）
 │   └── bash-process.md           # 进程管理跨平台命令参考
 ├── recipes/                      # 内置食谱库（可通过 --deploy-templates 部署到项目）
 └── design/                       # 设计文档
@@ -261,7 +261,7 @@ claude-coder/
 | `src/core/scan.js` | 项目扫描：技术栈识别、服务发现、文档收集 |
 | `src/core/init.js` | 环境初始化：npm install、服务启动、健康检查 |
 | `src/commands/setup.js` | 交互式配置向导：模型提供商选择、API Key 输入 |
-| `src/commands/auth.js` | Playwright 登录态导出：cookies + localStorage |
+| `src/commands/auth.js` | 浏览器工具凭证/配置：Playwright 登录态导出 + Chrome DevTools 远程调试 |
 
 ---
 
@@ -343,8 +343,8 @@ flowchart TB
 | 3 | `envHint` | 按 session 编号和失败状态 | 环境提示 |
 | 4 | `docsHint` | profile.existing_docs 非空 | 编码前读文档 |
 | 5 | `testEnvHint` | test.env 存在 | 测试凭证提示 |
-| 6 | `mcpHint` | MCP_PLAYWRIGHT=true 且任务需要 Web | Playwright 工具提示 |
-| 7 | `playwrightAuthHint` | MCP_PLAYWRIGHT=true 且任务需要 Web | Playwright 模式提示 |
+| 6 | `mcpHint` | WEB_TEST_TOOL 非空 且任务需要 Web | 浏览器测试工具提示 |
+| 7 | `webTestHint` | WEB_TEST_TOOL 非空 且任务需要 Web | 工具模式/连接提示 |
 | 8 | `retryContext` | 上次校验失败 | 避免同样的问题 |
 | 9 | `serviceHint` | 始终注入 | 服务管理策略 |
 

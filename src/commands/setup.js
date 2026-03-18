@@ -61,10 +61,10 @@ async function setup() {
     writeConfig(envPath, configResult.lines);
     ensureGitignore();
 
-    if (mcpConfig.enabled && mcpConfig.mode) {
+    if (mcpConfig.tool) {
       const { updateMcpConfig } = require('./auth');
       const mcpPath = assets.path('mcpConfig');
-      updateMcpConfig(mcpPath, mcpConfig.mode);
+      updateMcpConfig(mcpPath, mcpConfig.tool, mcpConfig.mode);
     }
 
     console.log('');
@@ -98,7 +98,7 @@ async function setup() {
     console.log('');
     console.log('  1) 切换模型提供商');
     console.log('  2) 更新 API Key');
-    console.log('  3) 配置 MCP');
+    console.log('  3) 配置浏览器测试工具');
     console.log('  4) 配置安全限制');
     console.log('  5) 配置自动审查');
     console.log('  6) 完全重新配置');
@@ -119,8 +119,8 @@ async function setup() {
         const configResult = await selectProvider(rl, existing);
         preserveSafetyConfig(configResult.lines, existing);
         appendMcpConfig(configResult.lines, {
-          enabled: existing.MCP_PLAYWRIGHT === 'true',
-          mode: existing.MCP_PLAYWRIGHT_MODE || null,
+          tool: existing.WEB_TEST_TOOL || '',
+          mode: existing.WEB_TEST_MODE || '',
         });
         writeConfig(envPath, configResult.lines);
         log('ok', `已切换到: ${configResult.summary}`);
@@ -150,10 +150,10 @@ async function setup() {
         appendMcpConfig(configResult.lines, mcpConfig);
         writeConfig(envPath, configResult.lines);
 
-        if (mcpConfig.enabled && mcpConfig.mode) {
+        if (mcpConfig.tool) {
           const { updateMcpConfig } = require('./auth');
           const mcpPath = assets.path('mcpConfig');
-          updateMcpConfig(mcpPath, mcpConfig.mode);
+          updateMcpConfig(mcpPath, mcpConfig.tool, mcpConfig.mode);
         }
 
         log('ok', '配置已更新');

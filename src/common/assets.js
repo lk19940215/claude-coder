@@ -26,7 +26,7 @@ const REGISTRY = new Map([
   // Other Templates
   ['testRule',       { file: 'test_rule.md',               kind: 'template' }],
   ['guidance',       { file: 'guidance.json',              kind: 'template' }],
-  ['playwright',     { file: 'playwright.md',              kind: 'template' }],
+  ['webTesting',     { file: 'web-testing.md',              kind: 'template' }],
   ['bashProcess',    { file: 'bash-process.md',            kind: 'template' }],
   ['requirements',   { file: 'requirements.example.md',    kind: 'template' }],
 

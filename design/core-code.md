@@ -74,7 +74,7 @@ executeCoding(config, sessionNum, opts)              ← src/core/coding.js
         │   ├── buildTaskContext() → 任务详情 + 步骤
         │   ├── buildMcpHint / buildRetryHint / buildEnvHint
         │   ├── buildDocsHint / buildTestEnvHint
-        │   ├── buildPlaywrightAuthHint / buildMemoryHint
+        │   ├── buildWebTestHint / buildMemoryHint
         │   ├── buildServiceHint
         │   └── assets.render('codingUser', vars)
         ├── session.buildQueryOptions(opts)

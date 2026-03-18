@@ -1,7 +1,7 @@
 'use strict';
 
 const { COLOR } = require('./config');
-const { localTimestamp, truncateMiddle, truncateCommand } = require('./utils');
+const { localTimestamp, truncateMiddle } = require('./utils');
 
 const SPINNERS = ['⠋', '⠙', '⠸', '⠴', '⠦', '⠇'];
 

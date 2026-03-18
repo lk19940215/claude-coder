@@ -41,7 +41,11 @@ function updateGitignore(entry) {
   }
 }
 
-function updateMcpConfig(mcpPath, mode) {
+// ─────────────────────────────────────────────────────────────
+// .mcp.json 配置（Playwright / Chrome DevTools 共用）
+// ─────────────────────────────────────────────────────────────
+
+function updateMcpConfig(mcpPath, tool, mode) {
   let mcpConfig = {};
   if (fs.existsSync(mcpPath)) {
     try { mcpConfig = JSON.parse(fs.readFileSync(mcpPath, 'utf8')); } catch {}
@@ -49,6 +53,19 @@ function updateMcpConfig(mcpPath, mode) {
 
   if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
 
+  if (tool === 'chrome-devtools') {
+    delete mcpConfig.mcpServers.playwright;
+    mcpConfig.mcpServers['chrome-devtools'] = {
+      command: 'npx',
+      args: ['-y', 'chrome-devtools-mcp@latest', '--autoConnect'],
+    };
+    fs.writeFileSync(mcpPath, JSON.stringify(mcpConfig, null, 2) + '\n', 'utf8');
+    log('ok', '.mcp.json 已配置 Chrome DevTools MCP (autoConnect)');
+    return;
+  }
+
+  // Playwright MCP
+  delete mcpConfig.mcpServers['chrome-devtools'];
   const args = ['@playwright/mcp@latest'];
   const projectRoot = assets.projectRoot;
 
@@ -75,23 +92,23 @@ function updateMcpConfig(mcpPath, mode) {
   log('ok', `.mcp.json 已配置 Playwright MCP (${mode} 模式)`);
 }
 
-function enableMcpPlaywrightEnv() {
+function enableWebTestEnv(tool) {
   const envPath = assets.path('env');
   if (!envPath || !fs.existsSync(envPath)) return;
 
   let content = fs.readFileSync(envPath, 'utf8');
-  if (/^MCP_PLAYWRIGHT=/m.test(content)) {
-    content = content.replace(/^MCP_PLAYWRIGHT=.*/m, 'MCP_PLAYWRIGHT=true');
+  if (/^WEB_TEST_TOOL=/m.test(content)) {
+    content = content.replace(/^WEB_TEST_TOOL=.*/m, `WEB_TEST_TOOL=${tool}`);
   } else {
     const suffix = content.endsWith('\n') ? '' : '\n';
-    content += `${suffix}MCP_PLAYWRIGHT=true\n`;
+    content += `${suffix}WEB_TEST_TOOL=${tool}\n`;
   }
   fs.writeFileSync(envPath, content, 'utf8');
-  log('ok', '.claude-coder/.env 已设置 MCP_PLAYWRIGHT=true');
+  log('ok', `.claude-coder/.env 已设置 WEB_TEST_TOOL=${tool}`);
 }
 
 // ─────────────────────────────────────────────────────────────
-// 浏览器脚本（session cookie 自动持久化）
+// 浏览器脚本（Playwright persistent 模式用）
 // ─────────────────────────────────────────────────────────────
 
 function buildBrowserScript(playwrightDir, profileDir, url) {
@@ -185,9 +202,9 @@ async function authPersistent(url) {
 
   const mcpPath = assets.path('mcpConfig');
   log('ok', '登录状态已保存到持久化配置');
-  updateMcpConfig(mcpPath, 'persistent');
+  updateMcpConfig(mcpPath, 'playwright', 'persistent');
   updateGitignore('.claude-coder/.runtime/browser-profile');
-  enableMcpPlaywrightEnv();
+  enableWebTestEnv('playwright');
 
   console.log('');
   log('ok', '配置完成！');
@@ -227,9 +244,9 @@ async function authIsolated(url) {
 
   const mcpPath = assets.path('mcpConfig');
   log('ok', '登录状态已保存到 playwright-auth.json');
-  updateMcpConfig(mcpPath, 'isolated');
+  updateMcpConfig(mcpPath, 'playwright', 'isolated');
   updateGitignore('.claude-coder/playwright-auth.json');
-  enableMcpPlaywrightEnv();
+  enableWebTestEnv('playwright');
 
   console.log('');
   log('ok', '配置完成！');
@@ -251,8 +268,8 @@ function authExtension() {
   console.log('');
 
   const mcpPath = assets.path('mcpConfig');
-  updateMcpConfig(mcpPath, 'extension');
-  enableMcpPlaywrightEnv();
+  updateMcpConfig(mcpPath, 'playwright', 'extension');
+  enableWebTestEnv('playwright');
 
   console.log('');
   log('ok', '配置完成！');
@@ -260,13 +277,68 @@ function authExtension() {
   log('info', '确保 Chrome/Edge 已运行且 Playwright MCP Bridge 扩展已启用');
 }
 
+function authChromeDevTools() {
+  console.log('Chrome DevTools MCP 配置:');
+  console.log('');
+  console.log('  此模式通过 Chrome DevTools Protocol 连接到已打开的 Chrome 浏览器。');
+  console.log('  直接复用浏览器中已有的登录态、扩展和 DevTools 调试能力。');
+  console.log('');
+  console.log('  前置条件:');
+  console.log('  1. Node.js v20.19+（npx 自动下载 chrome-devtools-mcp 包）');
+  console.log('  2. Chrome 144+ 版本');
+  console.log('  3. 打开 chrome://inspect/#remote-debugging 启用远程调试');
+  console.log('  4. 允许传入调试连接');
+  console.log('');
+  console.log('  功能:');
+  console.log('  - 输入自动化: 点击、输入、表单填写');
+  console.log('  - 页面导航: 多页面管理、截图');
+  console.log('  - 性能分析: Trace 录制、Core Web Vitals、Lighthouse 审计');
+  console.log('  - 调试工具: Console 消息、网络请求检查、内存快照');
+  console.log('');
+  console.log(`  注意: 单实例限制，同一时间只能连接一个 Chrome 调试会话。`);
+  console.log(`  如需多实例并行，请配置 Playwright MCP（claude-coder setup）。`);
+  console.log('');
+
+  const mcpPath = assets.path('mcpConfig');
+  updateMcpConfig(mcpPath, 'chrome-devtools');
+  enableWebTestEnv('chrome-devtools');
+
+  console.log('');
+  log('ok', '配置完成！');
+  log('info', 'Chrome DevTools MCP 使用 autoConnect 模式');
+  log('info', '确保 Chrome 已启动且已在 chrome://inspect 中启用远程调试');
+}
+
 async function auth(url) {
   assets.ensureDirs();
   const config = loadConfig();
-  const mode = config.playwrightMode;
+  const tool = config.webTestTool;
+
+  if (!tool) {
+    log('error', '未配置浏览器测试工具');
+    log('info', '请先运行 claude-coder setup 选择 Playwright MCP 或 Chrome DevTools MCP');
+    return;
+  }
+
+  if (tool === 'chrome-devtools') {
+    const [major, minor] = process.versions.node.split('.').map(Number);
+    if (major < 20 || (major === 20 && minor < 19)) {
+      log('warn', `当前 Node.js 版本 v${process.versions.node}，Chrome DevTools MCP 要求 v20.19+`);
+      log('info', 'nvm 用户请执行: nvm alias default 22 && nvm use 22');
+      log('info', '升级后重新运行此命令');
+      return;
+    }
+    log('info', '浏览器工具: Chrome DevTools MCP');
+    console.log('');
+    authChromeDevTools();
+    return;
+  }
+
+  // Playwright MCP
+  const mode = config.webTestMode;
   const targetUrl = normalizeUrl(url) || 'http://localhost:3000';
 
-  log('info', `Playwright 模式: ${mode}`);
+  log('info', `浏览器工具: Playwright MCP (${mode} 模式)`);
   log('info', `目标 URL: ${targetUrl}`);
   console.log('');
 

@@ -124,7 +124,7 @@ const Docs: React.FC = () => {
                 { cmd: 'plan "需求"', desc: '生成任务计划方案' },
                 { cmd: 'run "需求"', desc: '启动自动编码循环' },
                 { cmd: 'simplify', desc: '代码审查和简化' },
-                { cmd: 'auth [url]', desc: '导出 Playwright 登录状态' },
+                { cmd: 'auth [url]', desc: '配置浏览器测试工具 / 导出登录状态' },
                 { cmd: 'status', desc: '查看进度和成本统计' },
               ].map(({ cmd, desc }, index) => (
                 <div

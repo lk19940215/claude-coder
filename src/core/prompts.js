@@ -36,8 +36,11 @@ function needsWebTools(task) {
 // --------------- Hint Builders ---------------
 
 function buildMcpHint(config, task) {
-  if (!config.mcpPlaywright) return '';
+  if (!config.webTestTool) return '';
   if (!needsWebTools(task)) return '';
+  if (config.webTestTool === 'chrome-devtools') {
+    return '前端/全栈任务可用 Chrome DevTools MCP（navigate、click、type_text、screenshot 等）做端到端测试和调试。';
+  }
   return '前端/全栈任务可用 Playwright MCP（browser_navigate、browser_snapshot、browser_click 等）做端到端测试。';
 }
 
@@ -116,10 +119,15 @@ function buildTestEnvHint(projectRoot) {
   return '';
 }
 
-function buildPlaywrightAuthHint(config, task) {
-  if (!config.mcpPlaywright) return '';
+function buildWebTestHint(config, task) {
+  if (!config.webTestTool) return '';
   if (!needsWebTools(task)) return '';
-  const mode = config.playwrightMode;
+
+  if (config.webTestTool === 'chrome-devtools') {
+    return 'Chrome DevTools MCP 已启用，通过 autoConnect 连接已打开的 Chrome 浏览器，直接复用已有登录态。';
+  }
+
+  const mode = config.webTestMode;
   switch (mode) {
     case 'persistent':
       return 'Playwright MCP 使用 persistent 模式，浏览器登录状态持久保存，无需额外登录操作。';
@@ -176,7 +184,7 @@ function buildCodingContext(sessionNum, opts = {}) {
     envHint: buildEnvHint(consecutiveFailures, sessionNum),
     docsHint: buildDocsHint(),
     testEnvHint: buildTestEnvHint(projectRoot),
-    playwrightAuthHint: buildPlaywrightAuthHint(config, task),
+    webTestHint: buildWebTestHint(config, task),
     memoryHint: buildMemoryHint(),
     serviceHint: buildServiceHint(opts.maxSessions || 50),
   });
@@ -215,7 +223,7 @@ function buildPlanPrompt(planPath) {
 
   let testRuleHint = '';
   if (assets.exists('testRule') && assets.exists('mcpConfig')) {
-    testRuleHint = '【Playwright 测试规则】项目已配置 Playwright MCP（.mcp.json），' +
+    testRuleHint = '【浏览器测试规则】项目已配置浏览器测试工具（.mcp.json），' +
       '`.claude-coder/assets/test_rule.md` 包含测试规范（Smart Snapshot、等待策略、步骤模板等）。' +
       '前端页面 test 类任务 steps 首步加入 `【规则】阅读 .claude-coder/assets/test_rule.md`。';
   }

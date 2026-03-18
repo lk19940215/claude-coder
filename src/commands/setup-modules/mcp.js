@@ -1,6 +1,6 @@
 'use strict';
 
-const { ask, askChoice } = require('./helpers');
+const { askChoice } = require('./helpers');
 const { log, COLOR, updateEnvVar } = require('../../common/config');
 const { assets } = require('../../common/assets');
 
@@ -8,34 +8,31 @@ const { assets } = require('../../common/assets');
 
 async function configureMCP(rl) {
   console.log('');
-  console.log('是否启用 Playwright MCP（浏览器自动化测试）？');
+  console.log('是否启用浏览器测试工具？');
   console.log('');
-  console.log('  Playwright MCP 由微软官方维护 (github.com/microsoft/playwright-mcp)');
-  console.log('  提供 browser_click、browser_snapshot 等 25+ 浏览器自动化工具');
-  console.log('  适用于有 Web 前端的项目，Agent 可用它做端到端测试');
-  console.log('');
-  console.log('  1) 是 - 启用 Playwright MCP（项目有 Web 前端）');
-  console.log('  2) 否 - 跳过（纯后端 / CLI 项目）');
+  console.log('  1) Playwright MCP — 微软官方，25+ 浏览器自动化工具，支持多实例并行');
+  console.log('  2) Chrome DevTools MCP — Google 官方，连接已打开的 Chrome，调试能力更强');
+  console.log('     （单实例限制，多开请配置 Playwright MCP）');
+  console.log('  3) 跳过（纯后端 / CLI 项目）');
   console.log('');
 
-  const mcpChoice = await askChoice(rl, '选择 [1-2]: ', 1, 2);
+  const toolChoice = await askChoice(rl, '选择 [1-3]: ', 1, 3);
 
-  const mcpConfig = { enabled: false, mode: null };
+  const mcpConfig = { tool: '', mode: '' };
 
-  if (mcpChoice === 1) {
-    mcpConfig.enabled = true;
+  if (toolChoice === 1) {
+    mcpConfig.tool = 'playwright';
     console.log('');
     console.log('请选择 Playwright MCP 浏览器模式:');
     console.log('');
     console.log('  1) persistent - 懒人模式（默认，推荐）');
-    console.log('     登录一次永久生效，适合 Google SSO、企业内网 API 拉取等日常开发');
+    console.log('     登录一次永久生效，适合 Google SSO、企业内网等日常开发');
     console.log('');
     console.log('  2) isolated - 开发模式');
     console.log('     每次会话从快照加载，适合验证登录流程的自动化测试');
     console.log('');
     console.log('  3) extension - 连接真实浏览器（实验性）');
     console.log('     通过 Chrome 扩展复用已有登录态和插件');
-    console.log('     需要安装 "Playwright MCP Bridge" 扩展');
     console.log('');
 
     const modeChoice = await askChoice(rl, '选择 [1-3，默认 1]: ', 1, 3, 1);
@@ -58,6 +55,25 @@ async function configureMCP(rl) {
       console.log('  使用 claude-coder auth <URL> 录制登录状态到 playwright-auth.json');
       console.log('  MCP 每次会话从此文件加载初始 cookies/localStorage');
     }
+  } else if (toolChoice === 2) {
+    mcpConfig.tool = 'chrome-devtools';
+
+    const [major, minor] = process.versions.node.split('.').map(Number);
+    if (major < 20 || (major === 20 && minor < 19)) {
+      console.log('');
+      console.log(`  ${COLOR.yellow}⚠ 当前 Node.js v${process.versions.node}，Chrome DevTools MCP 要求 v20.19+${COLOR.reset}`);
+      console.log(`  ${COLOR.blue}  nvm 用户: nvm alias default 22 && nvm use 22${COLOR.reset}`);
+    }
+
+    console.log('');
+    console.log('  Chrome DevTools MCP 将连接已打开的 Chrome 浏览器。');
+    console.log('');
+    console.log('  前置条件:');
+    console.log('  1. Node.js v20.19+（npx 自动下载 chrome-devtools-mcp 包）');
+    console.log('  2. Chrome 144+');
+    console.log('  3. 打开 chrome://inspect/#remote-debugging 启用远程调试');
+    console.log('');
+    console.log('  运行 claude-coder auth 自动配置 .mcp.json');
   }
 
   return mcpConfig;
@@ -66,12 +82,12 @@ async function configureMCP(rl) {
 // ── MCP 配置追加到 lines ──
 
 function appendMcpConfig(lines, mcpConfig) {
-  lines.push('', '# MCP 工具配置');
-  if (mcpConfig.enabled) {
-    lines.push('MCP_PLAYWRIGHT=true');
-    if (mcpConfig.mode) lines.push(`MCP_PLAYWRIGHT_MODE=${mcpConfig.mode}`);
+  lines.push('', '# 浏览器测试工具配置');
+  if (mcpConfig.tool) {
+    lines.push(`WEB_TEST_TOOL=${mcpConfig.tool}`);
+    if (mcpConfig.mode) lines.push(`WEB_TEST_MODE=${mcpConfig.mode}`);
   } else {
-    lines.push('MCP_PLAYWRIGHT=false');
+    lines.push('WEB_TEST_TOOL=');
   }
 }
 
@@ -79,11 +95,15 @@ function appendMcpConfig(lines, mcpConfig) {
 
 async function updateMCPOnly(rl) {
   const mcpConfig = await configureMCP(rl);
-  updateEnvVar('MCP_PLAYWRIGHT', mcpConfig.enabled ? 'true' : 'false');
-  if (mcpConfig.enabled && mcpConfig.mode) {
-    updateEnvVar('MCP_PLAYWRIGHT_MODE', mcpConfig.mode);
+  updateEnvVar('WEB_TEST_TOOL', mcpConfig.tool);
+  if (mcpConfig.tool === 'playwright' && mcpConfig.mode) {
+    updateEnvVar('WEB_TEST_MODE', mcpConfig.mode);
     const { updateMcpConfig } = require('../auth');
-    updateMcpConfig(assets.path('mcpConfig'), mcpConfig.mode);
+    updateMcpConfig(assets.path('mcpConfig'), 'playwright', mcpConfig.mode);
+  } else if (mcpConfig.tool === 'chrome-devtools') {
+    updateEnvVar('WEB_TEST_MODE', '');
+    const { updateMcpConfig } = require('../auth');
+    updateMcpConfig(assets.path('mcpConfig'), 'chrome-devtools');
   }
   log('ok', 'MCP 配置已更新');
 }

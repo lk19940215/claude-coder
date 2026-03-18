@@ -76,7 +76,9 @@ function showCurrentConfig(existing) {
   console.log(`  提供商:     ${existing.MODEL_PROVIDER || '未配置'}`);
   console.log(`  BASE_URL:   ${existing.ANTHROPIC_BASE_URL || '默认'}`);
   console.log(`  模型:       ${existing.ANTHROPIC_MODEL || '默认'}`);
-  console.log(`  MCP:        ${existing.MCP_PLAYWRIGHT === 'true' ? `已启用 (${existing.MCP_PLAYWRIGHT_MODE || 'persistent'})` : '未启用'}`);
+  const webTool = existing.WEB_TEST_TOOL;
+  const webMode = existing.WEB_TEST_MODE;
+  console.log(`  浏览器工具: ${webTool ? `${webTool}${webMode ? ` (${webMode})` : ''}` : '未启用'}`);
   const turns = existing.SESSION_MAX_TURNS || '0';
   console.log(`  停顿超时:   ${existing.SESSION_STALL_TIMEOUT || '600'} 秒`);
   console.log(`  完成检测:   Stop hook（SDK 原生）`);

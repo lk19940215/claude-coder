@@ -74,13 +74,13 @@ buildCodingContext(sessionNum, opts)
     │   内容: "测试凭证文件: <path>，测试前用 source 加载"
     │
     ├── {{mcpHint}}                      ← buildMcpHint(config, task)
-    │   条件: config.mcpPlaywright === true 且 needsWebTools(task)
-    │   内容: "前端/全栈任务可用 Playwright MCP..."
+    │   条件: config.webTestTool 非空 且 needsWebTools(task)
+    │   内容: 按 webTestTool 类型返回 Playwright/Chrome DevTools 工具提示
     │
-    ├── {{playwrightAuthHint}}           ← buildPlaywrightAuthHint(config, task)
-    │   条件: config.mcpPlaywright === true 且 needsWebTools(task)
-    │   读取: config.playwrightMode + 检查 playwright-auth.json
-    │   内容: 按 persistent/isolated/extension 模式返回不同提示
+    ├── {{webTestHint}}                  ← buildWebTestHint(config, task)
+    │   条件: config.webTestTool 非空 且 needsWebTools(task)
+    │   读取: config.webTestTool + config.webTestMode
+    │   内容: 按工具类型和模式返回连接/认证状态提示
     │
     ├── {{retryContext}}                 ← buildRetryHint(consecutiveFailures, lastValidateLog)
     │   条件: consecutiveFailures > 0
@@ -111,7 +111,7 @@ session.buildQueryOptions(opts)
 ```
 createHooks('coding', ...)
 ├── guidance     ← GuidanceInjector, 基于 guidance.json 规则
-│   ├── matcher: "^mcp__playwright__" → 注入 playwright.md（仅一次）
+│   ├── matcher: "^mcp__playwright__" / "^mcp__chrome.devtools__" → 注入 web-testing.md（仅一次）
 │   │                                 + 按工具名注入 toolTips
 │   └── matcher: "Bash", condition: kill/pkill → 注入 bash-process.md（仅一次）
 ├── editGuard    ← 60s 滑动窗口内编辑超阈值 → deny
@@ -173,7 +173,7 @@ buildPlanPrompt(planPath)
     │   内容: tasks.json 格式 + 字段规范 + 粒度规则 + 验证命令模板
     │
     └── {{testRuleHint}}               ← 条件: testRule 存在 且 .mcp.json 存在
-        内容: "项目已配置 Playwright MCP，参考 test_rule.md"
+        内容: "项目已配置浏览器测试工具，参考 test_rule.md"
 
 SDK 选项:
 ├── permissionMode: 'bypassPermissions'
@@ -271,7 +271,7 @@ templates/scanUser.md           user prompt           scan
 templates/addUser.md            user prompt           plan phase 2
 templates/addGuide.md           user prompt           plan phase 2（嵌入）
 templates/guidance.json         hooks                 coding（工具匹配时）
-templates/playwright.md         hooks                 coding（MCP 工具首次调用）
+templates/web-testing.md        hooks                 coding（MCP 工具首次调用）
 templates/bash-process.md       hooks                 coding（kill/taskkill 命令时）
 .claude-coder/project_profile   docsHint              profile.existing_docs 非空时
 .claude-coder/tasks.json        taskContext            始终（结构化注入）

@@ -9,7 +9,7 @@ Session {{sessionNum}}。任务已分配，按 3 步流程执行。
 {{docsHint}}
 {{testEnvHint}}
 {{mcpHint}}
-{{playwrightAuthHint}}
+{{webTestHint}}
 {{retryContext}}
 
 ## 收尾

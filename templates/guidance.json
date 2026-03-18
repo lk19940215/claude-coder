@@ -4,18 +4,37 @@
       "name": "playwright",
       "matcher": "^mcp__playwright__",
       "file": {
-        "path": "assets/playwright.md",
+        "path": "assets/web-testing.md",
         "injectOnce": true
       },
       "toolTips": {
         "injectOnce": false,
         "extractor": "browser_(\\w+)",
         "items": {
-          "snapshot": "snapshot 消耗 3-8K tokens，仅在必要时使用。",
+          "snapshot": "snapshot 频率注意控制。",
           "wait_for": "设置合理 timeout，AI 生成任务建议 60-180s。",
           "click": "点击前确认元素已通过 snapshot 获取 ref。",
           "type": "大量文本输入可使用 fill_form 批量操作。",
           "navigate": "导航后必须 snapshot 确认页面加载成功。"
+        }
+      }
+    },
+    {
+      "name": "chrome-devtools",
+      "matcher": "^mcp__chrome.devtools__",
+      "file": {
+        "path": "assets/web-testing.md",
+        "injectOnce": true
+      },
+      "toolTips": {
+        "injectOnce": false,
+        "extractor": "^(\\w+)$",
+        "items": {
+          "take_snapshot": "snapshot 频率注意控制。",
+          "wait_for": "设置合理 timeout，AI 生成任务建议 60-180s。",
+          "click": "点击前确认元素已通过 take_snapshot 获取定位。",
+          "type_text": "大量文本输入可使用 fill_form 批量操作。",
+          "navigate_page": "导航后必须 take_snapshot 确认页面加载成功。"
         }
       }
     },

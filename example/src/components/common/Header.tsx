@@ -9,6 +9,7 @@ const navLinks = [
   { path: '/features', label: '功能特性' },
   { path: '/docs', label: '文档' },
   { path: '/examples', label: '案例' },
+  { path: '/browser-tools', label: '浏览器工具' },
 ];
 
 const Header: React.FC = () => {

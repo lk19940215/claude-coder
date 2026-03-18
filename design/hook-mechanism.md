@@ -192,7 +192,7 @@ interface HookOutput {
 
 ```json
 {
-  "file": { "path": "assets/playwright.md", "injectOnce": true },
+  "file": { "path": "assets/web-testing.md", "injectOnce": true },
   "toolTips": {
     "extractor": "browser_(\\w+)",
     "items": { "snapshot": "提示...", "click": "提示..." }
@@ -230,7 +230,7 @@ interface HookOutput {
 
 当前 `templates/guidance.json` 包含两条规则：
 
-- **Playwright 引导**：匹配 `mcp__playwright__*`，首次注入 `playwright.md` 全文，后续按子工具注入操作提示
+- **浏览器测试引导**：匹配 `mcp__playwright__*` 或 `mcp__chrome-devtools__*`，首次注入 `web-testing.md` 全文，后续按子工具注入操作提示
 - **Bash 进程管理**：仅当 Bash 命令含 `kill/pkill/killall` 时，注入 `bash-process.md`
 
 ---
@@ -240,9 +240,9 @@ interface HookOutput {
 ### 4.1 `injectOnce` — 避免重复注入
 
 ```
-首次 mcp__playwright__browser_snapshot → 注入 playwright.md + snapshot tip  ✓
-再次 mcp__playwright__browser_snapshot → 全部跳过                           ✗
-首次 mcp__playwright__browser_click    → 跳过 playwright.md + 注入 click tip ✓
+首次 mcp__playwright__browser_snapshot → 注入 web-testing.md + snapshot tip  ✓
+再次 mcp__playwright__browser_snapshot → 全部跳过                            ✗
+首次 mcp__playwright__browser_click    → 跳过 web-testing.md + 注入 click tip ✓
 ```
 
 通过 `injectedRules` Set 追踪已注入的 key。

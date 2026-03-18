@@ -375,7 +375,7 @@ test('AssetManager registry 包含所有模板和数据文件', () => {
   const templates = [
     'coreProtocol', 'codingSystem', 'planSystem', 'scanSystem', 'goSystem',
     'codingUser', 'scanUser', 'planUser',
-    'testRule', 'guidance', 'playwright', 'bashProcess', 'requirements',
+    'testRule', 'guidance', 'webTesting', 'bashProcess', 'requirements',
   ];
   const dataFiles = ['env', 'tasks', 'progress', 'sessionResult', 'profile', 'testEnv', 'playwrightAuth'];
   const runtimeFiles = ['browserProfile'];
@@ -579,8 +579,8 @@ test('prompts.js 不再使用 loadAndRender 或 paths()', () => {
 
 test('prompts.js 不再导出内部 hint 函数', () => {
   const prompts = require('../src/core/prompts');
-  const internalFns = ['buildMcpHint', 'buildRetryHint', 'buildEnvHint', 'buildTestHint',
-    'buildDocsHint', 'buildTaskHint', 'buildTestEnvHint', 'buildPlaywrightAuthHint',
+  const internalFns = ['buildMcpHint', 'buildRetryHint', 'buildEnvHint',
+    'buildDocsHint', 'buildTaskContext', 'buildTestEnvHint', 'buildWebTestHint',
     'buildMemoryHint', 'buildServiceHint'];
   for (const fn of internalFns) {
     assert(prompts[fn] === undefined, `不应导出内部函数 ${fn}`);

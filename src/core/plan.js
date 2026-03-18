@@ -13,29 +13,27 @@ const { Session } = require('./session');
 
 const PLANS_DIR = path.join(os.homedir(), '.claude', 'plans');
 
-function buildPlanOnlyPrompt(instruction, opts = {}) {
+function buildPlanOnlySystem(opts = {}) {
   const interactive = opts.interactive || false;
-  const reqFile = opts.reqFile || null;
-
-  const inputSection = reqFile
-    ? `需求文件路径: ${reqFile}\n先读取该文件，理解用户需求和约束。`
-    : `用户需求:\n${instruction}`;
-
   const interactionRule = interactive
     ? '如有不确定的关键决策点，使用 AskUserQuestion 工具向用户提问，对话确认方案。'
     : '不要提问，默认使用最佳推荐方案。';
 
-  return `你是一个资深技术架构师。根据以下需求，探索项目代码库后输出完整的技术方案文档。
-
-${inputSection}
+  return `你是一个资深技术架构师。根据用户需求，探索项目代码库后输出完整的技术方案文档。
 
 【流程】
 1. 探索项目代码库，理解结构和技术栈
 2. ${interactionRule}
 3. 使用 Write 工具将完整计划写入 ~/.claude/plans/ 目录（.md 格式）
 4. 写入后输出标记（独占一行）：PLAN_FILE_PATH: <计划文件绝对路径>
-5. 简要总结计划要点
-`;
+5. 简要总结计划要点`;
+}
+
+function buildPlanOnlyPrompt(instruction, opts = {}) {
+  const reqFile = opts.reqFile || null;
+  return reqFile
+    ? `需求文件路径: ${reqFile}\n先读取该文件，理解用户需求和约束。`
+    : instruction;
 }
 
 function copyPlanToProject(generatedPath) {
@@ -59,6 +57,7 @@ async function _executePlanGen(session, instruction, opts = {}) {
   const prompt = buildPlanOnlyPrompt(instruction, opts);
   const queryOpts = {
     permissionMode: 'plan',
+    systemPrompt: buildPlanOnlySystem(opts),
     cwd: opts.projectRoot || assets.projectRoot,
     hooks: session.hooks,
   };

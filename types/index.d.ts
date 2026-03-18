@@ -9,8 +9,8 @@ export interface Config {
   maxTurns?: number;
   stallTimeout: number;
   editThreshold?: number;
-  mcpPlaywright?: boolean;
-  playwrightMode?: 'persistent' | 'isolated' | 'extension';
+  webTestTool?: 'playwright' | 'chrome-devtools' | '';
+  webTestMode?: 'persistent' | 'isolated' | 'extension' | '';
   simplifyInterval: number;
   simplifyCommits: number;
   [key: string]: unknown;
