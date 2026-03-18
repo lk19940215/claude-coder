@@ -1,6 +1,5 @@
-import React, { memo } from 'react';
+import React from 'react';
 
-// Style classes - moved outside component to avoid recreation
 const VARIANT_CLASSES = {
   gradient: 'text-highlight',
   glow: 'text-glow text-[var(--lazy-cyan)]',
@@ -23,7 +22,7 @@ interface AnimatedTitleProps {
   animate?: boolean;
 }
 
-const AnimatedTitle: React.FC<AnimatedTitleProps> = memo(({
+const AnimatedTitle: React.FC<AnimatedTitleProps> = ({
   children,
   as: Component = 'h1',
   variant = 'gradient',
@@ -45,8 +44,6 @@ const AnimatedTitle: React.FC<AnimatedTitleProps> = memo(({
       )}
     </>
   );
-});
-
-AnimatedTitle.displayName = 'AnimatedTitle';
+};
 
 export default AnimatedTitle;

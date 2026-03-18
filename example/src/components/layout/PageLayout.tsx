@@ -1,6 +1,5 @@
-import React, { memo } from 'react';
+import React from 'react';
 
-// Max width classes - moved outside component to avoid recreation
 const MAX_WIDTH_CLASSES = {
   default: 'max-w-7xl',
   narrow: 'max-w-4xl',
@@ -14,7 +13,7 @@ interface PageLayoutProps {
   maxWidth?: 'default' | 'narrow' | 'wide' | 'full';
 }
 
-const PageLayout: React.FC<PageLayoutProps> = memo(({
+const PageLayout: React.FC<PageLayoutProps> = ({
   children,
   className = '',
   maxWidth = 'default',
@@ -28,8 +27,6 @@ const PageLayout: React.FC<PageLayoutProps> = memo(({
       </main>
     </div>
   );
-});
-
-PageLayout.displayName = 'PageLayout';
+};
 
 export default PageLayout;

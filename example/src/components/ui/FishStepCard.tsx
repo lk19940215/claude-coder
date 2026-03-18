@@ -1,6 +1,5 @@
-import React, { memo } from 'react';
+import React from 'react';
 
-// Variant styles - moved outside component to avoid recreation
 const VARIANT_STYLES = {
   default: 'bg-[var(--bg-200)] border border-[var(--border-300)]',
   primary: 'bg-gradient-to-br from-[var(--bg-200)] to-[var(--bg-100)] border border-[var(--primary-600)]/30',
@@ -19,7 +18,7 @@ interface FishStepCardProps {
   className?: string;
 }
 
-const FishStepCard: React.FC<FishStepCardProps> = memo(({
+const FishStepCard: React.FC<FishStepCardProps> = ({
   stepNumber,
   title,
   description,
@@ -30,7 +29,6 @@ const FishStepCard: React.FC<FishStepCardProps> = memo(({
   staggerIndex = 1,
   className = '',
 }) => {
-  // Compute delay dynamically instead of fixed CSS classes
   const animationDelay = staggerIndex * 100;
   const animationStyle = animate
     ? { animationDelay: `${animationDelay}ms` }
@@ -48,18 +46,14 @@ const FishStepCard: React.FC<FishStepCardProps> = memo(({
       style={animationStyle}
     >
       <div className="flex gap-4">
-        {/* Step number with gradient background */}
         <div className="flex-shrink-0">
           <div className="step-number relative group">
-            {/* Glow effect on hover */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[var(--fish-gold)] to-[var(--lazy-cyan)] opacity-0 group-hover:opacity-30 blur-lg transition-opacity" />
             <span className="relative z-10">{stepNumber}</span>
           </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Title with optional icon */}
           <div className="flex items-center gap-2 mb-2">
             {icon && (
               <span className="text-[var(--lazy-cyan)] flex-shrink-0">
@@ -71,14 +65,12 @@ const FishStepCard: React.FC<FishStepCardProps> = memo(({
             </h3>
           </div>
 
-          {/* Description */}
           {description && (
             <p className="text-[var(--text-400)] mb-4 leading-relaxed">
               {description}
             </p>
           )}
 
-          {/* Additional content (e.g., code blocks) */}
           {children && (
             <div className="mt-4">
               {children}
@@ -87,12 +79,9 @@ const FishStepCard: React.FC<FishStepCardProps> = memo(({
         </div>
       </div>
 
-      {/* Decorative bottom gradient line */}
       <div className="mt-6 h-0.5 bg-gradient-to-r from-[var(--fish-gold)] via-[var(--lazy-cyan)] to-transparent opacity-30 rounded-full" />
     </div>
   );
-});
-
-FishStepCard.displayName = 'FishStepCard';
+};
 
 export default FishStepCard;

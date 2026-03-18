@@ -807,93 +807,6 @@ body {
   box-shadow: 0 5px 15px rgba(139, 92, 246, 0.2);
 }
 
-/* ========== 性能优化：will-change 和 transform ========== */
-
-/* 动画元素性能优化 */
-.animate-fade-in-up,
-.animate-stagger-1,
-.animate-stagger-2,
-.animate-stagger-3,
-.animate-stagger-4,
-.animate-stagger-5 {
-  will-change: opacity, transform;
-  transform: translateZ(0);
-}
-
-/* 滑入动画优化 */
-.animate-slide-in-left,
-.animate-slide-in-right {
-  will-change: opacity, transform;
-  transform: translateZ(0);
-}
-
-/* 浮动动画优化 */
-.animate-float,
-.animate-wave,
-.animate-wave-slow,
-.animate-title-float {
-  will-change: transform;
-  transform: translateZ(0);
-}
-
-/* 渐变流动动画优化 */
-.gradient-flow-text,
-.animate-gradient-flow {
-  will-change: background-position;
-}
-
-/* 卡片悬停效果优化 */
-.card,
-.card-fish,
-.card-hover-enhanced,
-.card-gradient-border {
-  will-change: transform, box-shadow;
-  transform: translateZ(0);
-}
-
-/* 按钮悬停效果优化 */
-.btn-primary,
-.btn-hover-lift {
-  will-change: transform, box-shadow;
-  transform: translateZ(0);
-}
-
-/* 粒子动画优化 */
-.particle,
-.particle-fly {
-  will-change: transform, opacity;
-  transform: translateZ(0);
-}
-
-/* 导航项优化 */
-.nav-item,
-.nav-item-active {
-  will-change: background-color, color;
-}
-
-/* 链接下划线动画优化 */
-.link-underline::after {
-  will-change: width;
-}
-
-/* Step number 优化 */
-.step-number {
-  will-change: box-shadow;
-  transform: translateZ(0);
-}
-
-/* Pulse glow 动画优化 */
-.animate-pulse-glow {
-  will-change: box-shadow;
-}
-
-/* GPU 加速辅助类 */
-.gpu-accelerated {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
 /* 减少重绘：隐藏时禁用动画 */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -902,6 +815,5 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    will-change: auto !important;
   }
 }

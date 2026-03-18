@@ -3,7 +3,6 @@ import PageLayout from '../components/layout/PageLayout';
 import SectionCard from '../components/ui/SectionCard';
 import MobileSidebar from '../components/ui/MobileSidebar';
 import SidebarNav from '../components/ui/SidebarNav';
-import ParticleContainer from '../components/common/ParticleContainer';
 import { useMobileSidebar } from '../hooks/useMobileSidebar';
 import { scrollToElement } from '../utils';
 
@@ -38,15 +37,7 @@ const Features: React.FC = () => {
 
       {/* Page Header */}
       <div className="mb-8">
-        <ParticleContainer
-          particleType="heart"
-          particleCount={15}
-          particleSize={0.6}
-          autoTrigger
-          triggerDelay={300}
-        >
-          <h1 className="text-heading-1 text-[var(--text-50)] mb-4 cursor-pointer">功能特性</h1>
-        </ParticleContainer>
+        <h1 className="text-heading-1 text-[var(--text-50)] mb-4">功能特性</h1>
         <p className="text-body text-[var(--text-400)]">探索 Claude Coder 的核心能力</p>
       </div>
 
@@ -54,20 +45,8 @@ const Features: React.FC = () => {
         {/* Desktop Sidebar Navigation */}
         <aside className="hidden lg:block lg:col-span-1">
           <div className="sticky top-24">
-            <div className="card p-4 relative overflow-hidden">
-              {/* 侧边栏粒子背景 */}
-              <ParticleContainer
-                particleCount={20}
-                particleSize={0.4}
-                colors={['var(--primary-500)', 'var(--primary-400)']}
-                autoTrigger
-                triggerDelay={500}
-                className="absolute inset-0 opacity-20 pointer-events-none"
-              >
-                <div className="w-full h-full" />
-              </ParticleContainer>
-
-              <h3 className="text-caption text-[var(--text-400)] uppercase tracking-wider mb-4 relative z-10">功能导航</h3>
+            <div className="card p-4">
+              <h3 className="text-caption text-[var(--text-400)] uppercase tracking-wider mb-4">功能导航</h3>
               <SidebarNav items={sections} activeId={activeSection} onItemClick={handleNavClick} />
             </div>
           </div>
@@ -77,16 +56,7 @@ const Features: React.FC = () => {
         <div className="lg:col-span-3 space-y-8">
           {/* Hook Injection */}
           <SectionCard id="hook" variant="default" className="card-hover-enhanced">
-            <ParticleContainer
-              particleType="heart"
-              particleCount={12}
-              particleSize={0.5}
-              colors={['var(--fish-gold)', 'var(--lazy-cyan)']}
-              autoTrigger
-              triggerDelay={200}
-            >
-              <h2 className="text-heading-2 text-[var(--text-50)] mb-4 cursor-pointer inline-block">Hook 提示注入机制</h2>
-            </ParticleContainer>
+            <h2 className="text-heading-2 text-[var(--text-50)] mb-4">Hook 提示注入机制</h2>
             <p className="text-body mb-4 leading-relaxed">
               核心亮点：通过 JSON 配置，在 SDK 工具调用时自动向模型注入上下文引导。
               <strong className="text-[var(--text-50)]">零代码修改</strong>即可扩展 AI 行为规则——
@@ -110,16 +80,7 @@ const Features: React.FC = () => {
 
           {/* Session Guardian */}
           <SectionCard id="session" variant="default" className="card-hover-enhanced">
-            <ParticleContainer
-              particleType="heart"
-              particleCount={12}
-              particleSize={0.5}
-              colors={['var(--fish-gold)', 'var(--lazy-cyan)']}
-              autoTrigger
-              triggerDelay={200}
-            >
-              <h2 className="text-heading-2 text-[var(--text-50)] mb-4 cursor-pointer inline-block">Session 守护机制</h2>
-            </ParticleContainer>
+            <h2 className="text-heading-2 text-[var(--text-50)] mb-4">Session 守护机制</h2>
             <p className="text-body mb-4 leading-relaxed">
               专为<strong className="text-[var(--text-50)]">长时间无人值守编码</strong>设计。
               多 Session 编排 + 倒计时活跃度监控，Agent 可连续运行数小时自主完成数十个任务。
@@ -146,16 +107,7 @@ const Features: React.FC = () => {
 
           {/* Multi-Model Routing */}
           <SectionCard id="model" variant="default" className="card-hover-enhanced">
-            <ParticleContainer
-              particleType="heart"
-              particleCount={12}
-              particleSize={0.5}
-              colors={['var(--fish-gold)', 'var(--lazy-cyan)']}
-              autoTrigger
-              triggerDelay={200}
-            >
-              <h2 className="text-heading-2 text-[var(--text-50)] mb-4 cursor-pointer inline-block">多模型路由</h2>
-            </ParticleContainer>
+            <h2 className="text-heading-2 text-[var(--text-50)] mb-4">多模型路由</h2>
             <p className="text-body mb-4 leading-relaxed">
               不绑定单一模型。支持 Claude 官方、Coding Plan 多模型路由、DeepSeek、GLM-5、Qwen 等
               <strong className="text-[var(--text-50)]">任意 Anthropic 兼容 API</strong>，
@@ -172,16 +124,7 @@ ANTHROPIC_MODEL=kimi-k2.5`}</pre>
 
           {/* Test Credentials */}
           <SectionCard id="test" variant="default" className="card-hover-enhanced">
-            <ParticleContainer
-              particleType="heart"
-              particleCount={12}
-              particleSize={0.5}
-              colors={['var(--fish-gold)', 'var(--lazy-cyan)']}
-              autoTrigger
-              triggerDelay={200}
-            >
-              <h2 className="text-heading-2 text-[var(--text-50)] mb-4 cursor-pointer inline-block">测试凭证管理</h2>
-            </ParticleContainer>
+            <h2 className="text-heading-2 text-[var(--text-50)] mb-4">测试凭证管理</h2>
             <p className="text-body mb-4 leading-relaxed">
               Agent 编完代码还能<strong className="text-[var(--text-50)]">自动验证</strong>。
               Playwright 一键导出浏览器登录态，API Key 持久化存储，
