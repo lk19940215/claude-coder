@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import PageLayout from '../components/layout/PageLayout';
 import SectionCard from '../components/ui/SectionCard';
 import EnhancedCodeBlock from '../components/ui/EnhancedCodeBlock';
+import MobileSidebar from '../components/ui/MobileSidebar';
+import SidebarNav from '../components/ui/SidebarNav';
 import { useMobileSidebar } from '../hooks/useMobileSidebar';
 import { scrollToElement } from '../utils';
 
@@ -13,20 +15,6 @@ const docs = [
   { id: 'troubleshooting', title: '故障排查' },
 ];
 
-// Menu icon component
-const MenuIcon = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
-
-// Close icon component
-const CloseIcon = () => (
-  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-  </svg>
-);
-
 const Docs: React.FC = () => {
   const [activeDoc, setActiveDoc] = useState('getting-started');
   const { isOpen, toggle, close } = useMobileSidebar();
@@ -35,62 +23,19 @@ const Docs: React.FC = () => {
     e.preventDefault();
     setActiveDoc(id);
     scrollToElement(id);
-    close(); // Close mobile sidebar after navigation
+    close();
   }, [close]);
-
-  // Sidebar navigation content (reused for both mobile and desktop)
-  const SidebarNav = () => (
-    <nav>
-      <ul className="space-y-2">
-        {docs.map((item, index) => (
-          <li key={item.id}>
-            <a
-              href={`#${item.id}`}
-              className={`nav-item animate-slide-in-left ${activeDoc === item.id ? 'nav-item-active' : ''}`}
-              style={{ animationDelay: `${index * 0.1}s` }}
-              onClick={(e) => handleNavClick(e, item.id)}
-            >
-              {item.title}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
 
   return (
     <PageLayout>
-      {/* Mobile sidebar toggle button */}
-      <button
-        onClick={toggle}
-        className="sidebar-toggle-btn fixed top-20 left-4 z-50 lg:hidden"
-        aria-label="Toggle sidebar"
+      <MobileSidebar
+        isOpen={isOpen}
+        onClose={close}
+        onToggle={toggle}
+        title="文档目录"
       >
-        <MenuIcon />
-      </button>
-
-      {/* Mobile sidebar overlay */}
-      {isOpen && (
-        <div
-          className="sidebar-overlay visible lg:hidden"
-          onClick={close}
-        />
-      )}
-
-      {/* Mobile sidebar */}
-      <aside className={`fixed top-0 left-0 w-[280px] h-screen bg-[var(--bg-100)] border-r border-[var(--border-300)] z-50 overflow-y-auto p-6 transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-heading-3 text-[var(--text-50)]">文档目录</h3>
-          <button
-            onClick={close}
-            className="p-2 rounded-lg hover:bg-[var(--bg-200)] transition-colors"
-            aria-label="Close sidebar"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-        <SidebarNav />
-      </aside>
+        <SidebarNav items={docs} activeId={activeDoc} onItemClick={handleNavClick} />
+      </MobileSidebar>
 
       {/* Page Header */}
       <div className="mb-8">
@@ -104,7 +49,7 @@ const Docs: React.FC = () => {
           <div className="sticky top-24">
             <div className="card p-4">
               <h3 className="text-caption text-[var(--text-400)] uppercase tracking-wider mb-4">文档导航</h3>
-              <SidebarNav />
+              <SidebarNav items={docs} activeId={activeDoc} onItemClick={handleNavClick} />
             </div>
           </div>
         </aside>
