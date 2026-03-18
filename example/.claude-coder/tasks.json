@@ -91,7 +91,7 @@
         "优化移动端响应式（max-w-4xl + px-4）",
         "验证: 页面加载有流畅入场动画，移动端显示正常"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-004"]
     },
     {

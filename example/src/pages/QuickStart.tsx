@@ -1,107 +1,129 @@
 import React from 'react';
+import PageLayout from '../components/layout/PageLayout';
+import FishStepCard from '../components/ui/FishStepCard';
+import EnhancedCodeBlock from '../components/ui/EnhancedCodeBlock';
 
 const QuickStart: React.FC = () => {
   return (
-    <div className="min-h-screen">
-      <main className="pt-24 pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold text-[var(--text-50)] mb-4">快速上手</h1>
-          <p className="text-lg text-[var(--text-400)] mb-12">只需几步，开始使用 Claude Coder</p>
+    <PageLayout maxWidth="narrow">
+      {/* Page Header */}
+      <div className="mb-12">
+        <h1 className="text-heading-1 text-[var(--text-50)] mb-4">快速上手</h1>
+        <p className="text-body text-[var(--text-400)]">只需几步，开始使用 Claude Coder</p>
+      </div>
 
-          {/* Steps */}
-          <div className="space-y-12">
-            {/* Step 1 */}
-            <div className="card">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-600)] flex items-center justify-center text-white font-bold flex-shrink-0">1</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-[var(--text-50)] mb-3">安装</h2>
-                  <div className="code-block">
-                    <pre className="text-[var(--text-200)]">{`# 安装 Claude Agent SDK
+      {/* Steps */}
+      <div className="space-y-8">
+        {/* Step 1: 安装 */}
+        <FishStepCard
+          stepNumber={1}
+          title="安装"
+          staggerIndex={1}
+          variant="default"
+        >
+          <EnhancedCodeBlock
+            language="bash"
+            title="安装依赖"
+          >{`# 安装 Claude Agent SDK
 npm install -g @anthropic-ai/claude-agent-sdk
 
 # 安装 Claude Coder
-npm install -g claude-coder`}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
+npm install -g claude-coder`}</EnhancedCodeBlock>
+        </FishStepCard>
 
-            {/* Step 2 */}
-            <div className="card">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-600)] flex items-center justify-center text-white font-bold flex-shrink-0">2</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-[var(--text-50)] mb-3">配置</h2>
-                  <div className="code-block mb-4">
-                    <pre className="text-[var(--text-200)]">{`# 交互式配置（模型、MCP、安全限制）
+        {/* Step 2: 配置 */}
+        <FishStepCard
+          stepNumber={2}
+          title="配置"
+          staggerIndex={2}
+          variant="default"
+        >
+          <EnhancedCodeBlock
+            language="bash"
+            title="配置环境"
+          >{`# 交互式配置（模型、MCP、安全限制）
 claude-coder setup
 
 # 或手动配置环境变量
-echo "ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5" >> .env`}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
+echo "ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5" >> .env`}</EnhancedCodeBlock>
+        </FishStepCard>
 
-            {/* Step 3 */}
-            <div className="card">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-600)] flex items-center justify-center text-white font-bold flex-shrink-0">3</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-[var(--text-50)] mb-3">初始化项目</h2>
-                  <div className="code-block">
-                    <pre className="text-[var(--text-200)]">{`cd your-project
-claude-coder init`}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* Step 3: 初始化项目 */}
+        <FishStepCard
+          stepNumber={3}
+          title="初始化项目"
+          staggerIndex={3}
+          variant="default"
+        >
+          <EnhancedCodeBlock
+            language="bash"
+            title="初始化"
+          >{`cd your-project
+claude-coder init`}</EnhancedCodeBlock>
+        </FishStepCard>
 
-            {/* Step 4 */}
-            <div className="card">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary-600)] flex items-center justify-center text-white font-bold flex-shrink-0">4</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-[var(--text-50)] mb-3">开始编码</h2>
-                  <div className="code-block mb-4">
-                    <pre className="text-[var(--text-200)]">{`# 方式一：直接输入需求
+        {/* Step 4: 开始编码 */}
+        <FishStepCard
+          stepNumber={4}
+          title="开始编码"
+          staggerIndex={4}
+          variant="default"
+        >
+          <EnhancedCodeBlock
+            language="bash"
+            title="运行命令"
+          >{`# 方式一：直接输入需求
 claude-coder run "实现用户注册和登录功能"
 
 # 方式二：从需求文件读取
 claude-coder run
 
 # 方式三：交互模式
-claude-coder plan -i "需求描述"`}</pre>
-                  </div>
-                  <h3 className="text-lg font-semibold text-[var(--text-50)] mb-2">常用选项</h3>
-                  <ul className="list-disc list-inside text-[var(--text-400)] space-y-1">
-                    <li><code>--max N</code>：限制 session 数（默认 50）</li>
-                    <li><code>--pause N</code>：每 N 个 session 暂停确认</li>
-                    <li><code>--dry-run</code>：预览模式（查看任务队列）</li>
-                    <li><code>--model M</code>：指定模型</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+claude-coder plan -i "需求描述"`}</EnhancedCodeBlock>
 
-            {/* Verification */}
-            <div className="card border-[var(--success-500)]">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-[var(--success-500)] flex items-center justify-center text-white font-bold flex-shrink-0">✓</div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-bold text-[var(--text-50)] mb-3">验证安装</h2>
-                  <div className="code-block">
-                    <pre className="text-[var(--text-200)]">{`claude-coder status
-# 应显示配置信息和模型状态`}</pre>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="mt-6">
+            <h4 className="text-heading-3 text-[var(--text-50)] mb-3">常用选项</h4>
+            <ul className="space-y-2 text-[var(--text-400)]">
+              <li className="flex items-start gap-2">
+                <code className="px-2 py-0.5 bg-[var(--bg-100)] rounded text-[var(--lazy-cyan)] text-sm">--max N</code>
+                <span className="text-body">限制 session 数（默认 50）</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <code className="px-2 py-0.5 bg-[var(--bg-100)] rounded text-[var(--lazy-cyan)] text-sm">--pause N</code>
+                <span className="text-body">每 N 个 session 暂停确认</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <code className="px-2 py-0.5 bg-[var(--bg-100)] rounded text-[var(--lazy-cyan)] text-sm">--dry-run</code>
+                <span className="text-body">预览模式（查看任务队列）</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <code className="px-2 py-0.5 bg-[var(--bg-100)] rounded text-[var(--lazy-cyan)] text-sm">--model M</code>
+                <span className="text-body">指定模型</span>
+              </li>
+            </ul>
           </div>
-        </div>
-      </main>
-    </div>
+        </FishStepCard>
+
+        {/* Verification */}
+        <FishStepCard
+          stepNumber={5}
+          title="验证安装"
+          staggerIndex={5}
+          variant="success"
+          icon={
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          }
+        >
+          <EnhancedCodeBlock
+            language="bash"
+            title="验证"
+          >{`claude-coder status
+# 应显示配置信息和模型状态`}</EnhancedCodeBlock>
+        </FishStepCard>
+      </div>
+    </PageLayout>
   );
 };
 
