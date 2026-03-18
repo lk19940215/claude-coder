@@ -132,7 +132,7 @@
         "优化示例预览效果（card-gradient-border）",
         "验证: 网格布局在各种屏幕尺寸下正常，动画流畅"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-007"]
     },
     {
