@@ -258,7 +258,7 @@
         "【P1】键盘导航测试：Tab 键可访问所有交互元素",
         "验证: 所有浏览器显示一致，性能指标达标"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-011", "feat-012", "feat-013", "feat-014"]
     }
   ]
