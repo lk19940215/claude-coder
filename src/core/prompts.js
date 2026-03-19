@@ -18,7 +18,9 @@ function buildSystemPrompt(type) {
     case 'plan':    specific = assets.read('planSystem') || ''; break;
     case 'go':      specific = assets.read('goSystem') || ''; break;
     case 'design':  specific = assets.read('designSystem') || ''; break;
+    case 'designFix': specific = assets.read('designFixSystem') || ''; break;
   }
+  if (type === 'design' || type === 'designFix') return specific;
   return specific ? `${specific}\n\n${core}` : core;
 }
 

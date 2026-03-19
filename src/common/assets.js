@@ -18,12 +18,15 @@ const REGISTRY = new Map([
   ['scanSystem',     { file: 'scanSystem.md',              kind: 'template' }],
   ['goSystem',       { file: 'goSystem.md',                kind: 'template' }],
   ['designSystem',   { file: 'designSystem.md',            kind: 'template' }],
+  ['designFixSystem',{ file: 'designFixSystem.md',         kind: 'template' }],
+  ['designInit',     { file: 'designInit.md',              kind: 'template' }],
 
   // User Prompt Templates
   ['codingUser',     { file: 'codingUser.md',              kind: 'template' }],
   ['scanUser',       { file: 'scanUser.md',                kind: 'template' }],
   ['planUser',       { file: 'planUser.md',                kind: 'template' }],
   ['designUser',     { file: 'designUser.md',              kind: 'template' }],
+  ['designFixUser',  { file: 'designFixUser.md',           kind: 'template' }],
 
   // Other Templates
   ['testRule',       { file: 'test_rule.md',               kind: 'template' }],

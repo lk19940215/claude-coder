@@ -3,6 +3,9 @@
 ## 概述
 
 `claude-coder design` 命令使用 Pencil 的 `.pen` 格式（纯 JSON）作为设计载体，支持通过自然语言生成和迭代修改 UI 原型。面向"一人 AI 公司"场景，实现**原型即 UI**的全自动设计能力。
+[格式文档](https://docs.pencil.dev/for-developers/the-pen-format)
+[格式文档](https://docs.pencil.dev/core-concepts/pen-files)
+[技能文档](https://github.com/chiroro-jr/pencil-design-skill)
 
 ## 核心决策
 

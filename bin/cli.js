@@ -12,7 +12,7 @@ const COMMANDS = {
   auth:      { desc: '导出 Playwright 登录状态', usage: 'claude-coder auth [url]' },
   status:    { desc: '查看任务进度和成本',       usage: 'claude-coder status' },
   go:        { desc: 'AI 驱动的需求组装',        usage: 'claude-coder go ["需求"] [-r file] [--reset]' },
-  design:    { desc: 'AI 生成/修改 UI 设计',     usage: 'claude-coder design ["需求"] [--reset]' },
+  design:    { desc: 'AI 生成/修改 UI 设计',     usage: 'claude-coder design ["需求"] [--fix] [--reset]' },
 };
 
 function showHelp() {
@@ -42,6 +42,8 @@ function showHelp() {
   console.log('  claude-coder design                  对话式 UI 设计');
   console.log('  claude-coder design "用户管理后台"    AI 自动生成 UI 设计');
   console.log('  claude-coder design "改成暗色主题"    迭代修改已有设计');
+  console.log('  claude-coder design "还原首页" --model glm-5  推荐模型');
+  console.log('  claude-coder design --fix             修复 .pen 文件格式问题');
   console.log('  claude-coder design --reset          重置设计状态');
   console.log('  claude-coder auth                    导出 Playwright 登录状态');
   console.log('  claude-coder auth http://localhost:8080   指定登录 URL'); 
@@ -93,6 +95,9 @@ function parseArgs(argv) {
         break;
       case '--reset':
         opts.reset = true;
+        break;
+      case '--fix':
+        opts.fix = true;
         break;
       case '-i':
       case '--interactive':
