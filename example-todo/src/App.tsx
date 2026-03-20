@@ -1,15 +1,19 @@
+import { DndProvider } from 'react-dnd'
+import { HTML5Backend } from 'react-dnd-html5-backend'
+import { TaskProvider } from './context/TaskContext'
+import { TagProvider } from './context/TagContext'
+import { AppLayout } from './components/layout/AppLayout'
+import './styles/globals.css'
+
 function App() {
   return (
-    <div className="min-h-screen bg-dark-bg text-dark-text flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold text-dark-text mb-2">
-          FlowTask
-        </h1>
-        <p className="text-dark-muted">
-          项目配置成功
-        </p>
-      </div>
-    </div>
+    <TaskProvider>
+      <TagProvider>
+        <DndProvider backend={HTML5Backend}>
+          <AppLayout />
+        </DndProvider>
+      </TagProvider>
+    </TaskProvider>
   )
 }
 

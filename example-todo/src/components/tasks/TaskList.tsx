@@ -1,6 +1,4 @@
 import { useCallback, useState } from 'react'
-import { DndProvider } from 'react-dnd'
-import { HTML5Backend } from 'react-dnd-html5-backend'
 import { TaskItem } from './TaskItem'
 import { TaskDragLayer } from './TaskDragLayer'
 import { TaskForm } from './TaskForm'
@@ -59,55 +57,53 @@ export function TaskList({ className = '' }: TaskListProps) {
   }, [])
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className={`flex flex-col h-full ${className}`}>
-        {/* 头部 */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[#E5E7EB]">任务列表</h2>
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<span>+</span>}
-            onClick={handleCreate}
-          >
-            添加任务
-          </Button>
-        </div>
-
-        {/* 任务列表 */}
-        <div className="flex-1 overflow-y-auto">
-          {tasks.length === 0 ? (
-            <EmptyState onCreateTask={handleCreate} />
-          ) : (
-            <div className="space-y-3">
-              {tasks.map((task, index) => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  index={index}
-                  onToggleStatus={toggleTaskStatus}
-                  onDelete={deleteTask}
-                  onEdit={handleEdit}
-                  onReorder={handleReorder}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* 拖拽层 */}
-        <TaskDragLayer />
-
-        {/* 表单弹窗 */}
-        <TaskForm
-          isOpen={formOpen}
-          onClose={handleCloseForm}
-          onSubmit={handleSubmit}
-          task={editingTask}
-          mode={editingTask ? 'edit' : 'create'}
-        />
+    <div className={`flex flex-col h-full ${className}`}>
+      {/* 头部 */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-[#E5E7EB]">任务列表</h2>
+        <Button
+          variant="primary"
+          size="sm"
+          leftIcon={<span>+</span>}
+          onClick={handleCreate}
+        >
+          添加任务
+        </Button>
       </div>
-    </DndProvider>
+
+      {/* 任务列表 */}
+      <div className="flex-1 overflow-y-auto">
+        {tasks.length === 0 ? (
+          <EmptyState onCreateTask={handleCreate} />
+        ) : (
+          <div className="space-y-3">
+            {tasks.map((task, index) => (
+              <TaskItem
+                key={task.id}
+                task={task}
+                index={index}
+                onToggleStatus={toggleTaskStatus}
+                onDelete={deleteTask}
+                onEdit={handleEdit}
+                onReorder={handleReorder}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 拖拽层 */}
+      <TaskDragLayer />
+
+      {/* 表单弹窗 */}
+      <TaskForm
+        isOpen={formOpen}
+        onClose={handleCloseForm}
+        onSubmit={handleSubmit}
+        task={editingTask}
+        mode={editingTask ? 'edit' : 'create'}
+      />
+    </div>
   )
 }
 

@@ -193,7 +193,7 @@
         "验证: 检查页面布局符合设计稿",
         "验证: 检查暗色主题正确应用"
       ],
-      "status": "pending",
+      "status": "done",
       "depends_on": ["feat-008", "feat-010", "feat-011"]
     },
     {

@@ -2,44 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 全局样式 */
-* {
+/* 全局样式 - FlowTask TodoList */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   min-height: 100vh;
-  background-color: #0f0f0f;
-  color: #e5e5e5;
+  background-color: #121416;
+  color: #E5E7EB;
+  line-height: 1.5;
 }
 
 /* 滚动条样式 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #1A1D21;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
-  border-radius: 3px;
+  background: #3D4149;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4a4a4a;
+  background: #4D5159;
 }
 
-/* 自定义选中样式 */
+/* 选择文本颜色 */
 ::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: #fff;
+  background-color: #7CB68E40;
+  color: #E5E7EB;
+}
+
+/* 链接样式 */
+a {
+  color: #7CB68E;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #8DC69F;
+}
+
+/* 按钮重置 */
+button {
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+/* 输入框重置 */
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* 焦点样式 */
+:focus-visible {
+  outline: 2px solid #7CB68E;
+  outline-offset: 2px;
+}
+
+/* 渐变色文字 */
+.text-gradient {
+  background: linear-gradient(135deg, #7CB68E 0%, #D4A574 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
 }
