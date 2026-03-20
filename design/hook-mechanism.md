@@ -192,7 +192,7 @@ interface HookOutput {
 
 ```json
 {
-  "file": { "path": "assets/web-testing.md", "injectOnce": true },
+  "file": { "path": "assets/other/web-testing.md", "injectOnce": true },
   "toolTips": {
     "extractor": "browser_(\\w+)",
     "items": { "snapshot": "提示...", "click": "提示..." }

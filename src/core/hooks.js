@@ -115,28 +115,41 @@ class GuidanceInjector {
 
   /**
    * Get rule file content
+   * Uses assets module for template resolution (supports user overrides + bundled fallback)
    * @param {object|string} file - File config or path string
-   * @param {string} basePath - Base directory for relative paths
    */
-  getFileContent(file, basePath) {
+  getFileContent(file) {
     if (!file) return null;
 
     const filePath = typeof file === 'string' ? file : file.path;
-    const absolutePath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(basePath, filePath);
 
-    try {
-      return fs.readFileSync(absolutePath, 'utf8');
-    } catch {
-      return null;
+    // Check if path matches a known registry entry (e.g., 'webTesting', 'bashProcess')
+    // by converting 'assets/web-testing.md' → ['other', 'web-testing.md']
+    if (filePath.startsWith('assets/')) {
+      const segments = filePath.replace(/^assets\//, '').split('/');
+      // Map to template directory structure: assets/web-testing.md → other/web-testing.md
+      if (segments.length === 1) {
+        segments.unshift('other');
+      }
+      const resolved = assets._resolveTemplate?.(segments);
+      if (resolved) {
+        try { return fs.readFileSync(resolved, 'utf8'); } catch { /* fall through */ }
+      }
     }
+
+    // Fallback: try direct path resolution
+    const absolutePath = path.isAbsolute(filePath) ? filePath : assets.path(filePath);
+    if (absolutePath) {
+      try { return fs.readFileSync(absolutePath, 'utf8'); } catch { /* ignore */ }
+    }
+
+    return null;
   }
 
   /**
    * Process a single rule and return guidance content
    */
-  processRule(rule, input, basePath) {
+  processRule(rule, input) {
     const matcherRe = this._compiledMatchers?.get(rule.name) ?? new RegExp(rule.matcher);
     if (!matcherRe.test(input.tool_name)) {
       return null;
@@ -163,7 +176,7 @@ class GuidanceInjector {
         // Get cached content or read file
         const cacheKey = `${rule.name}_content`;
         if (!this.cache[cacheKey]) {
-          this.cache[cacheKey] = this.getFileContent(fileConfig.path, basePath);
+          this.cache[cacheKey] = this.getFileContent(fileConfig.path);
         }
         result.guidance = this.cache[cacheKey] || '';
       }
@@ -200,8 +213,6 @@ class GuidanceInjector {
    * Create hook function for PreToolUse
    */
   createHook() {
-    const basePath = assets.dir('loop');
-
     return async (input, _toolUseID, _context) => {
       this.load();
 
@@ -211,7 +222,7 @@ class GuidanceInjector {
       const tipParts = [];
 
       for (const rule of this.rules) {
-        const result = this.processRule(rule, input, basePath);
+        const result = this.processRule(rule, input);
         if (result) {
           if (result.guidance) guidanceParts.push(result.guidance);
           if (result.tip) tipParts.push(result.tip);
