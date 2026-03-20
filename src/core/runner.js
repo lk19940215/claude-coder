@@ -432,7 +432,7 @@ async function executeRun(config, opts = {}) {
       state = await onStall(session, { headBefore, taskId, sessionResult, config, ...state });
       if (state.consecutiveFailures === 0) {
         if (shouldSimplify(config)) await tryRunSimplify(config);
-        tryPush(projectRoot);
+        // tryPush(projectRoot);
       }
       continue;
     }
@@ -448,7 +448,7 @@ async function executeRun(config, opts = {}) {
       if (shouldSimplify(config)) {
         await tryRunSimplify(config);
       }
-      tryPush(projectRoot);
+      // tryPush(projectRoot);
     } else {
       state = await onFailure(session, { headBefore, taskId, sessionResult, validateResult, ...state });
     }

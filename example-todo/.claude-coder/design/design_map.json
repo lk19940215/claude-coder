@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "designSystem": "system.lib.pen",
+  "pages": {
+    "home": {
+      "pen": "pages/home.pen",
+      "description": "FlowTask TodoList 主页面 - 包含任务列表、标签筛选、番茄钟计时功能"
+    }
+  }
+}

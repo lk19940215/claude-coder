@@ -1,0 +1,224 @@
+{
+  "project": "FlowTask - 创意 TodoList 应用",
+  "created_at": "2026-03-20",
+  "features": [
+    {
+      "id": "feat-001",
+      "category": "infra",
+      "priority": 1,
+      "description": "项目基础配置和依赖安装",
+      "steps": [
+        "创建 package.json，配置项目元数据和依赖包",
+        "创建 vite.config.ts，配置 Vite 构建工具",
+        "创建 tsconfig.json，配置 TypeScript 编译选项",
+        "创建 tailwind.config.js 和 postcss.config.js，配置暗色主题",
+        "创建 index.html 作为应用入口",
+        "创建 src/main.tsx 和 src/App.tsx 基础文件",
+        "验证: npm install && npm run dev → 访问 http://localhost:5173 显示空白页无错误",
+        "验证: 检查 package.json 中包含所有必需依赖"
+      ],
+      "status": "done",
+      "depends_on": []
+    },
+    {
+      "id": "feat-002",
+      "category": "fullstack",
+      "priority": 2,
+      "description": "定义 TypeScript 类型和常量",
+      "steps": [
+        "Read home.pen 设计稿中的类型结构",
+        "创建 src/types/index.ts，定义 Task、PomodoroSession、PomodoroStats 等核心接口",
+        "创建 src/types/constants.ts，定义内置标签、状态枚举、默认配置",
+        "创建 src/utils/time.ts，实现时间格式化和倒计时工具函数",
+        "验证: 检查所有类型定义覆盖需求文档中的数据结构",
+        "验证: 测试时间工具函数的正确性"
+      ],
+      "status": "done",
+      "depends_on": ["feat-001"]
+    },
+    {
+      "id": "feat-003",
+      "category": "fullstack",
+      "priority": 3,
+      "description": "实现 localStorage 数据持久化工具",
+      "steps": [
+        "创建 src/utils/storage.ts，实现 LocalStorageService 类",
+        "封装 get、set、clear 方法，支持泛型和错误处理",
+        "实现自动序列化/反序列化",
+        "验证: 编写测试代码，验证数据存取正确性",
+        "验证: 刷新页面后数据保持不变"
+      ],
+      "status": "done",
+      "depends_on": ["feat-001"]
+    },
+    {
+      "id": "feat-004",
+      "category": "fullstack",
+      "priority": 4,
+      "description": "实现任务管理上下文和 Hook",
+      "steps": [
+        "Read home.pen 设计稿中的任务列表结构",
+        "创建 src/context/TaskContext.tsx，定义全局任务状态",
+        "创建 src/hooks/useTasks.ts，封装任务的增删改查、排序、状态切换逻辑",
+        "实现任务拖拽排序的辅助函数",
+        "验证: 测试添加、编辑、删除任务功能",
+        "验证: 测试任务状态切换（待办→进行中→已完成）"
+      ],
+      "status": "done",
+      "depends_on": ["feat-002", "feat-003"]
+    },
+    {
+      "id": "feat-005",
+      "category": "fullstack",
+      "priority": 5,
+      "description": "实现标签管理上下文和 Hook",
+      "steps": [
+        "Read home.pen 设计稿中的标签侧边栏设计",
+        "创建 src/context/TagContext.tsx，定义标签状态管理",
+        "创建 src/hooks/useTags.ts，封装标签筛选逻辑",
+        "验证: 测试标签筛选功能",
+        "验证: 测试多标签关联"
+      ],
+      "status": "done",
+      "depends_on": ["feat-002", "feat-003"]
+    },
+    {
+      "id": "feat-006",
+      "category": "frontend",
+      "priority": 6,
+      "description": "实现番茄钟计时 Hook",
+      "steps": [
+        "Read home.pen 设计稿中的番茄钟组件设计",
+        "创建 src/hooks/usePomodoro.ts，实现 25分钟工作+5分钟休息循环逻辑",
+        "实现 requestAnimationFrame 精确倒计时",
+        "实现任务关联和今日统计功能",
+        "验证: 测试倒计时精确到秒",
+        "验证: 测试暂停/继续/重置功能",
+        "验证: 测试工作模式自动切换到休息模式"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-002", "feat-003"]
+    },
+    {
+      "id": "feat-007",
+      "category": "frontend",
+      "priority": 7,
+      "description": "实现 UI 基础组件（Button、Input、Modal）",
+      "steps": [
+        "创建 src/components/ui/Button.tsx，支持多种类型和状态",
+        "创建 src/components/ui/Input.tsx，支持文本输入",
+        "创建 src/components/ui/Modal.tsx，支持模态框显示",
+        "验证: 测试各组件在不同状态下的渲染"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-001"]
+    },
+    {
+      "id": "feat-008",
+      "category": "frontend",
+      "priority": 8,
+      "description": "实现标签组件（TagPill、TagSidebar）",
+      "steps": [
+        "Read home.pen 设计稿中的标签药丸样式",
+        "创建 src/components/tags/TagPill.tsx，实现彩色药丸标签展示",
+        "创建 src/components/tags/TagSidebar.tsx，实现左侧标签导航栏",
+        "集成 useTags Hook，实现点击筛选功能",
+        "验证: 标签显示四种颜色（工作蓝色、学习绿色、生活紫色、紧急红色）",
+        "验证: 点击标签正确筛选任务"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-005", "feat-007"]
+    },
+    {
+      "id": "feat-009",
+      "category": "frontend",
+      "priority": 9,
+      "description": "实现任务表单组件",
+      "steps": [
+        "Read home.pen 设计稿中的任务添加表单设计",
+        "创建 src/components/tasks/TaskForm.tsx，实现添加/编辑任务表单",
+        "集成标签选择功能",
+        "验证: 测试表单提交和验证",
+        "验证: 测试编辑模式正确加载数据"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-004", "feat-008"]
+    },
+    {
+      "id": "feat-010",
+      "category": "frontend",
+      "priority": 10,
+      "description": "实现任务项和任务列表组件",
+      "steps": [
+        "Read home.pen 设计稿中的任务列表布局",
+        "安装 react-dnd 和 react-dnd-html5-backend 依赖",
+        "创建 src/components/tasks/TaskItem.tsx，实现单个任务展示和交互",
+        "创建 src/components/tasks/TaskDragLayer.tsx，实现拖拽视觉反馈",
+        "创建 src/components/tasks/TaskList.tsx，集成拖拽排序功能",
+        "验证: 测试任务列表渲染",
+        "验证: 测试拖拽排序功能正常工作"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-004", "feat-009"]
+    },
+    {
+      "id": "feat-011",
+      "category": "frontend",
+      "priority": 11,
+      "description": "实现番茄钟组件",
+      "steps": [
+        "Read home.pen 设计稿中的番茄钟面板设计",
+        "创建 src/components/timer/TimerDisplay.tsx，实现大数字倒计时显示",
+        "创建 src/components/timer/TimerControls.tsx，实现控制按钮",
+        "创建 src/components/timer/PomodoroTimer.tsx，集成倒计时和统计",
+        "集成 usePomodoro Hook",
+        "验证: 测试倒计时显示正确",
+        "验证: 测试控制按钮功能",
+        "验证: 测试今日番茄钟统计正确累计"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-006"]
+    },
+    {
+      "id": "feat-012",
+      "category": "frontend",
+      "priority": 12,
+      "description": "实现应用布局和主页面",
+      "steps": [
+        "Read home.pen 设计稿中的整体页面布局",
+        "创建 src/components/layout/Header.tsx，实现顶部导航栏",
+        "创建 src/components/layout/AppLayout.tsx，实现三栏布局（左侧标签、中间任务、右侧番茄钟）",
+        "创建 src/styles/globals.css，配置全局样式和暗色主题",
+        "集成所有子组件到 src/App.tsx",
+        "验证: 检查页面布局符合设计稿",
+        "验证: 检查暗色主题正确应用"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-008", "feat-010", "feat-011"]
+    },
+    {
+      "id": "feat-013",
+      "category": "test",
+      "priority": 13,
+      "description": "端到端功能测试",
+      "steps": [
+        "【P0】添加任务测试: 添加3个不同标签的任务，验证列表正确显示",
+        "【P0】编辑任务测试: 编辑任务标题和描述，验证更新成功",
+        "【P0】删除任务测试: 删除任务，验证有确认提示且删除成功",
+        "【P0】拖拽排序测试: 拖拽任务调整顺序，验证排序正确",
+        "【P0】状态切换测试: 切换任务状态（待办→进行中→已完成），验证状态正确",
+        "【P0】标签筛选测试: 点击标签筛选，验证只显示对应标签任务",
+        "【P0】数据持久化测试: 刷新页面，验证任务数据保持不变",
+        "【P0】番茄钟基础测试: 点击开始，验证25分钟倒计时正常",
+        "【P0】番茄钟控制测试: 测试暂停、继续、重置功能",
+        "【P0】番茄钟循环测试: 等待25分钟结束，验证自动切换到5分钟休息",
+        "【P1】任务关联测试: 选择任务进行计时，验证关联正确",
+        "【P1】今日统计测试: 完成多个番茄钟，验证统计数字正确",
+        "【P2】边界测试: 快速连续点击按钮，验证无异常",
+        "【P2】大量任务测试: 添加50+任务，验证性能可接受"
+      ],
+      "status": "pending",
+      "depends_on": ["feat-012"]
+    }
+  ]
+}

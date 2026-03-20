@@ -1,3 +1,19 @@
+# Dependencies
 node_modules/
+
+# Claude Coder
+.claude-coder/*
+!.claude-coder/tasks.json
+!.claude-coder/project_profile.json
+!.claude-coder/design/
+!.claude-coder/session_result.json
+
+# Build
 dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
 .DS_Store

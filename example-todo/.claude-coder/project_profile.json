@@ -1,0 +1,18 @@
+{
+  "name": "creative-todo",
+  "detected_at": "2026-03-18T10:00:00",
+  "project_type": "new",
+  "tech_stack": {
+    "languages": ["typescript"],
+    "backend": { "framework": "none" },
+    "frontend": { "framework": "react", "bundler": "vite" },
+    "database": "none",
+    "package_managers": ["npm"]
+  },
+  "services": [],
+  "env_setup": {},
+  "existing_docs": [],
+  "has_tests": false,
+  "has_docker": false,
+  "custom_init": []
+}
