@@ -96,7 +96,7 @@
         "验证: 测试暂停/继续/重置功能",
         "验证: 测试工作模式自动切换到休息模式"
       ],
-      "status": "in_progress",
+      "status": "done",
       "depends_on": ["feat-002", "feat-003"]
     },
     {

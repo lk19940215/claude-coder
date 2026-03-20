@@ -204,7 +204,7 @@
       "priority": 12,
       "description": "QuickStart 页面 Playwright E2E 测试",
       "steps": [
-        "【规则】阅读 .claude-coder/assets/test_rule.md（如果有）",
+        "【规则】阅读项目中的 test_rule.md 测试规范",
         "【P0】测试页面加载：检查标题 '快速上手' 存在",
         "【P0】测试步骤卡片：检查 4 个步骤卡片渲染正常",
         "【P0】测试代码块：检查所有代码块可显示",
@@ -223,7 +223,6 @@
       "priority": 13,
       "description": "Features 页面 Playwright E2E 测试",
       "steps": [
-        "【规则】阅读 .claude-coder/assets/test_rule.md（如果有）",
         "【P0】测试页面加载：检查标题 '功能特性' 存在",
         "【P0】测试侧边栏：检查导航项渲染正常",
         "【P0】测试内容区域：检查 4 个功能章节存在",
@@ -243,7 +242,6 @@
       "priority": 14,
       "description": "Docs 和 Examples 页面 Playwright E2E 测试",
       "steps": [
-        "【规则】阅读 .claude-coder/assets/test_rule.md（如果有）",
         "【P0】测试 Docs 页面：检查文档结构完整",
         "【P0】测试代码块复制：检查复制按钮工作正常",
         "【P0】测试 Examples 页面：检查示例卡片渲染",
