@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node agent.mjs"
+    "start": "node --no-deprecation src/agent.mjs",
+    "clean": "rm -rf logs/*.log logs/*.json && echo 'logs 已清除'"
   },
   "engines": {
     "node": ">=20.0.0"
