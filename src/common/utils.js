@@ -156,7 +156,7 @@ function sleep(ms) {
 // ─────────────────────────────────────────────────────────────
 
 function tryPush(projectRoot) {
-  const { log } = require('./config');
+  const { log } = require('./display');
   try {
     const remotes = execSync('git remote', { cwd: projectRoot, encoding: 'utf8' }).trim();
     if (!remotes) return;
@@ -169,7 +169,7 @@ function tryPush(projectRoot) {
 }
 
 function killServices(projectRoot) {
-  const { log } = require('./config');
+  const { log } = require('./display');
   const { assets } = require('./assets');
   const profile = assets.readJson('profile', null);
   if (!profile) return;
