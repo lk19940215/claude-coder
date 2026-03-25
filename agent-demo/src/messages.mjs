@@ -1,41 +1,39 @@
 /**
  * Messages 管理
  *
- * - all: 完整历史（不裁剪）
- * - current: 发送给 LLM 的消息（后续可裁剪）
- * - 每次变更自动持久化到 JSON 文件
- * - load(): 从 JSON 文件恢复历史会话
+ * - all: 完整历史
+ * - current: 发送给 LLM 的消息（后续可加滑动窗口）
+ * - 自动持久化到 JSON 文件（防崩溃丢失）
+ * - load(): 恢复历史会话
  */
 
-import { writeFileSync, readFileSync, mkdirSync } from 'fs';
+import { writeFile, readFile, mkdir } from 'fs/promises';
 
 export class Messages {
   constructor() {
     this.all = [];
     this.file = null;
+    this._saveTimer = null;
   }
 
-  init(logFileBase) {
-    mkdirSync('logs', { recursive: true });
+  async init(logFileBase) {
+    await mkdir('logs', { recursive: true });
     this.file = logFileBase ? logFileBase.replace('.log', '-messages.json') : null;
-    this._save();
   }
 
-  /** 从已有 JSON 文件加载消息历史（会话恢复） */
-  load(filePath) {
+  async load(filePath) {
     try {
-      const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+      const data = JSON.parse(await readFile(filePath, 'utf-8'));
       this.all = Array.isArray(data) ? data : [];
-      console.log(`\x1b[2m已加载 ${this.all.length} 条历史消息: ${filePath}\x1b[0m`);
-      this._save();
-    } catch (e) {
-      console.error(`\x1b[33m加载消息失败: ${e.message}\x1b[0m`);
+      return { ok: true, count: this.all.length };
+    } catch {
+      return { ok: false };
     }
   }
 
   push(msg) {
     this.all.push(msg);
-    this._save();
+    this._debounceSave();
   }
 
   get current() {
@@ -46,8 +44,20 @@ export class Messages {
     return this.all.length;
   }
 
-  _save() {
+  _debounceSave() {
+    if (this._saveTimer) return;
+    this._saveTimer = setTimeout(() => {
+      this._saveTimer = null;
+      this._save();
+    }, 500);
+  }
+
+  async _save() {
     if (!this.file) return;
-    writeFileSync(this.file, JSON.stringify(this.all, null, 2), 'utf-8');
+    try {
+      await writeFile(this.file, JSON.stringify(this.all), 'utf-8');
+    } catch {
+      // 静默失败，不中断 agent
+    }
   }
 }

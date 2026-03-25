@@ -37,8 +37,9 @@ function labelColor(label) {
 export { C };
 
 export class Logger {
-  constructor(debug = false) {
+  constructor(debug = false, { silent = false } = {}) {
     this.debug = debug;
+    this.silent = silent;
     this.file = null;
   }
 
@@ -54,26 +55,33 @@ export class Logger {
   }
 
   start({ model, tools, logFile, systemPrompt, toolSchemas }) {
-    console.log(`\n${C.cyan}${C.bold}═══ AI Coding Agent ═══${C.reset}`);
-    console.log(`${C.dim}模型: ${model}${C.reset}`);
-    console.log(`${C.dim}工具: ${tools.join(', ')}${C.reset}`);
-    if (logFile) console.log(`${C.dim}调试日志: ${logFile}${C.reset}`);
-    console.log(`${C.dim}输入任务开始，exit 退出${C.reset}\n`);
-    if (systemPrompt) this._section('System Prompt', systemPrompt);
-    if (toolSchemas) this._section('可用工具', toolSchemas);
+    if (!this.silent) {
+      console.log(`\n${C.cyan}${C.bold}═══ AI Coding Agent ═══${C.reset}`);
+      console.log(`${C.dim}模型: ${model}${C.reset}`);
+      console.log(`${C.dim}工具: ${tools.join(', ')}${C.reset}`);
+      if (logFile) console.log(`${C.dim}调试日志: ${logFile}${C.reset}`);
+      console.log(`${C.dim}输入任务开始，exit 退出${C.reset}\n`);
+    }
+    if (systemPrompt) this._section('System Prompt', `[已注入] ${systemPrompt.split('\n')[0]}...`);
+    if (toolSchemas) {
+      const summary = toolSchemas.map(t => `  - ${t.name}: ${t.description}`).join('\n');
+      this._section('可用工具', summary);
+    }
   }
 
   print(text) {
-    console.log(text);
+    if (!this.silent) console.log(text);
   }
 
   log(label, data) {
-    const color = labelColor(label);
-    if (data !== undefined) {
-      const preview = typeof data === 'string' ? data : JSON.stringify(data);
-      console.log(`${color}[${label}] ${preview.substring(0, 200)}${preview.length > 200 ? '...' : ''}${C.reset}`);
-    } else {
-      console.log(`${color}${label}${C.reset}`);
+    if (!this.silent) {
+      const color = labelColor(label);
+      if (data !== undefined) {
+        const preview = typeof data === 'string' ? data : JSON.stringify(data);
+        console.log(`${color}[${label}] ${preview.substring(0, 200)}${preview.length > 200 ? '...' : ''}${C.reset}`);
+      } else {
+        console.log(`${color}${label}${C.reset}`);
+      }
     }
     this._section(label, data);
   }

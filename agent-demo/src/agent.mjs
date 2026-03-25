@@ -12,34 +12,84 @@
  *        如果没有工具结果（end_turn）→ 回到 1（等用户）
  *   }
  *
+ * 显示层使用 Ink（React for CLI），解决原 ANSI status() 被 console.log 覆盖的问题
+ *
  * 运行: npm start
  * 恢复会话: RESUME_FILE=logs/xxx-messages.json npm start
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import * as readline from 'readline';
 
 import { API_KEY, BASE_URL, DEFAULT_MODEL, MAX_TOKENS, DEBUG, SYSTEM_PROMPT, RESUME_FILE } from './config.mjs';
 import { toolSchemas, executeTool } from './tools.mjs';
-import { status } from './display.mjs';
-import { Logger, C } from './logger.mjs';
+import { createDisplay } from './ink.mjs';
+import { Logger } from './logger.mjs';
 import { Messages } from './messages.mjs';
 
-// Anthropic SDK 客户端，支持 baseURL 切换模型提供商
+// ─── 常量定义 ─────────────────────────────────────────────
+const MAX_TOOL_RESULT_LENGTH = 8000;  // 工具结果最大长度，防止上下文窗口溢出
+
+// ─── 工具函数 ─────────────────────────────────────────────
+/**
+ * 判断是否需要等待用户输入
+ * @param {string|null} stopReason - 停止原因
+ * @returns {boolean} - true 表示需要等待用户输入
+ */
+function shouldWaitForUser(stopReason) {
+  return stopReason !== 'tool_use' && stopReason !== 'max_tokens';
+}
+
+function toolResultPreview(name, result) {
+  if (!result || result.startsWith('错误') || result.startsWith('rg:')) return result.substring(0, 60);
+  if (name === 'read_file') {
+    const lines = result.split('\n').length;
+    return `${lines} 行`;
+  }
+  if (name === 'grep_search') {
+    const matches = result.split('\n').filter(l => l.trim()).length;
+    return `${matches} 处匹配`;
+  }
+  if (name === 'list_files') {
+    const files = result.split('\n').filter(l => l.trim()).length;
+    return `${files} 个文件`;
+  }
+  if (name === 'edit_file') return result;
+  if (name === 'write_file') return result;
+  if (name === 'execute_bash') return result.split('\n')[0]?.substring(0, 60) || '';
+  return '';
+}
+
+function toolInputPreview(name, input) {
+  if (name === 'read_file') return input.path;
+  if (name === 'write_file') return `${input.path} (${input.content?.length || 0} 字符)`;
+  if (name === 'edit_file') return input.path;
+  if (name === 'grep_search') return `/${input.pattern}/${input.include ? ` ${input.include}` : ''}`;
+  if (name === 'list_files') return input.path || '.';
+  if (name === 'execute_bash') return `$ ${input.command?.substring(0, 80)}`;
+  return JSON.stringify(input).substring(0, 80);
+}
+
+// ─── 初始化 ───────────────────────────────────────────────
 const client = new Anthropic({ apiKey: API_KEY, baseURL: BASE_URL });
-const logger = new Logger(DEBUG);
+const logger = new Logger(DEBUG, { silent: true });
 const messages = new Messages();
+const display = createDisplay();
 
 async function main() {
-  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-  const ask = (q) => new Promise(resolve => rl.question(q, resolve));
-
   const logFile = logger.init();
-  messages.init(logFile);
+  await messages.init(logFile);
 
   if (RESUME_FILE) {
-    messages.load(RESUME_FILE);
+    const { ok, count } = await messages.load(RESUME_FILE);
+    if (ok) logger.log('会话恢复', `加载 ${count} 条历史消息`);
   }
+
+  // Ink UI 负责终端渲染，Logger 只写文件
+  display.start({
+    model: DEFAULT_MODEL,
+    tools: toolSchemas.map(t => t.name),
+    logFile,
+  });
 
   logger.start({
     model: DEFAULT_MODEL,
@@ -56,30 +106,22 @@ async function main() {
   let stopReason = null;
 
   while (true) {
-    // ── 步骤 1: 获取用户输入（工具循环中跳过）──────────────    
-    if (stopReason !== 'tool_use' && stopReason !== 'max_tokens') {
-      status('waiting');
-      const input = await ask(`\x1b[32m你: \x1b[0m`);
-      if (!input || input.trim() === 'exit') break;
+    // ── 步骤 1: 获取用户输入（工具循环中跳过）──────────────
+    if (shouldWaitForUser(stopReason)) {
+      const input = await display.waitForInput();
+      if (!input) break;
+
+      display.print(`\n你: ${input}`, 'green', { bold: true });
       messages.push({ role: 'user', content: input });
     }
 
     if (stopReason === 'max_tokens') {
-      logger.print(`${C.yellow}[续] 输出被截断，继续请求...${C.reset}`);
+      display.print('⚡ 输出被截断，继续请求...', 'yellow');
     }
 
-    status('thinking');
-
-    const requestParams = {
-      model: DEFAULT_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      tools: toolSchemas,
-      messages: messages.current,
-    };
+    display.status('thinking');
 
     logger.log('请求参数', {
-      model: DEFAULT_MODEL,
       max_tokens: MAX_TOKENS,
       baseURL: BASE_URL || 'default',
       messages数量: messages.length,
@@ -87,12 +129,38 @@ async function main() {
 
     let response;
     try {
-      // ── 步骤 2: 调用 LLM ─────────────────────────────────
-      // 每次都发送完整的 messages 历史 + 工具定义
-      // 模型根据历史和工具描述，决定是回复文本还是调用工具
-      response = await client.messages.create(requestParams);
+      // ── 步骤 2: 调用 LLM（流式）──────────────────────────
+      // stream() 逐 token 接收，text 事件实时显示
+      // finalMessage() 拿到和 create() 相同结构的完整 response
+      const stream = client.messages.stream({
+        model: DEFAULT_MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        tools: toolSchemas,
+        messages: messages.current,
+      });
+
+      // 监听原始流事件，区分 thinking / text / tool_use
+      stream.on('streamEvent', (event) => {
+        if (event.type === 'content_block_start') {
+          const t = event.content_block.type;
+          if (t === 'thinking') display.startStream('thinking');
+          else if (t === 'text') display.startStream('text');
+        } else if (event.type === 'content_block_delta') {
+          if (event.delta.type === 'thinking_delta') {
+            display.appendText(event.delta.thinking);
+          } else if (event.delta.type === 'text_delta') {
+            display.appendText(event.delta.text);
+          }
+        } else if (event.type === 'content_block_stop') {
+          display.finishStream();
+        }
+      });
+
+      response = await stream.finalMessage();
     } catch (e) {
-      status('error');
+      display.status('error');
+      display.print(`❌ 请求失败: ${e.message}`, 'red');
       logger.log('错误', e.message);
       stopReason = null;
       continue;
@@ -108,22 +176,20 @@ async function main() {
     const toolResults = [];
 
     for (const block of response.content) {
-      if (block.type === 'text') {
-        logger.print(`\n${C.cyan}Agent:${C.reset} ${block.text}\n`);
-
-      } else if (block.type === 'tool_use') {
-        status('calling');
+      // text 已在流式阶段显示，不需要再 print
+      if (block.type === 'tool_use') {
+        display.status('calling');
+        display.toolStart(block.name, toolInputPreview(block.name, block.input));
         logger.log(`工具开始: ${block.name}`, block.input);
 
         const result = await executeTool(block.name, block.input);
 
-        // 截断过长的工具结果，防止上下文窗口溢出
-        const MAX = 8000;
-        const truncated = result.length > MAX
-          ? result.substring(0, MAX) + `\n... [截断，共 ${result.length} 字符]`
+        const truncated = result.length > MAX_TOOL_RESULT_LENGTH
+          ? result.substring(0, MAX_TOOL_RESULT_LENGTH) + `\n... [截断，共 ${result.length} 字符]`
           : result;
 
-        // 工具执行后记录
+        const isError = /^(错误|失败|编辑失败|写入失败|列出失败|搜索失败|rg:)/.test(result);
+        display.toolEnd(block.name, result.length, toolResultPreview(block.name, result), !isError);
         logger.log(`工具完成: ${block.name}`, truncated);
 
         // tool_result 的 tool_use_id 必须匹配 tool_use 的 id（API 协议要求）
@@ -140,16 +206,12 @@ async function main() {
       // 有工具结果 → 作为 user 消息送回（API 协议：tool_result 必须在 user 角色下）
       // stopReason 仍是 'tool_use'，下一轮会跳过用户输入，直接再调 LLM
       messages.push({ role: 'user', content: toolResults });
-    } else if (stopReason === 'max_tokens') {
-      // 截断时不等用户，继续调 LLM 接着输出
-    } else {
-      // 没有工具调用（end_turn）→ 任务完成，下一轮等待用户输入
-      status('done');
+    } else if (shouldWaitForUser(stopReason)) {
+      display.status('done');
     }
   }
 
-  logger.print(`\n${C.dim}再见！${C.reset}\n`);
-  rl.close();
+  display.destroy();
 }
 
 main();

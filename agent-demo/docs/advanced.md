@@ -1,27 +1,40 @@
-# 文件编辑 + 上下文管理 + 多模型
+# 上下文管理 + 多模型 + 显示层
 
-> 当前聚焦。
+---
+
+## 显示层：Ink（React for CLI）
+
+原来的 `display.mjs` 用 ANSI `\r` 覆写状态，会被 `console.log` 冲掉。
+
+当前方案：`src/ink.mjs`，基于 Ink v6（React for CLI）。
+
+架构：
+```
+┌─ <Static> 永久区 ────────────────┐
+│ ═══ AI Coding Agent ═══          │  ← 头部
+│ 你: hello                        │  ← 对话历史
+│ Agent: 你好                      │
+│   ⚡ read_file → path: ...      │  ← 工具日志
+│   ✓ read_file 完成               │
+├─ 动态区（Spinner / 状态）─────────┤
+│ ⠹ 思考中...                     │
+│ 你: █                           │  ← 用户输入
+└──────────────────────────────────┘
+```
+
+桥接模式：React `useState` setter 暴露到模块级变量 → 外部命令式代码调用 → 触发 React 重渲染。
 
 ---
 
 ## 文件编辑策略
 
-当前 `write_file` 全量写入，大文件浪费 token。
+✅ 已实现 Search & Replace：`edit_file(path, old_string, new_string)`
 
-| 方案 | 采用者 | 优点 | 难点 |
-|------|--------|------|------|
-| Search & Replace | Claude Code, Cline | token 少 | old_string 必须完全匹配 |
-| Apply Patch | OpenAI / GPT | 多文件一次 | 模型格式遵循度差异大 |
-| 行号定位 | IDE 插件 | 简单 | 行号漂移 |
-| Streaming Diff | Cline (Claude 4) | 实时预览 | 需流式处理 |
-
-推荐先实现 Search & Replace：`edit_file(path, old_string, new_string)`。
-
-Search & Replace 原理：读文件 → 字符串匹配 old_string → 替换为 new_string → 写回。唯一性检查：匹配 0 次报错，>1 次警告。
-
-模型如何知道文件内容？Agent Loop 自然流程：先 Read 文件 → 内容进入 messages → 模型据此输出精确的 old_string → Edit。
-
-Claude Code **不会编辑后读回验证**（已知问题）。
+| 方案 | 采用者 | 状态 |
+|------|--------|------|
+| Search & Replace | Claude Code, Cline | ✅ 已实现 |
+| Apply Patch | OpenAI / GPT | 未实现 |
+| 行号定位 | IDE 插件 | 未实现 |
 
 ---
 
@@ -67,7 +80,7 @@ demo 最简实现：`messages.mjs` 的 `current` getter 加滑动窗口。
 
 ## 待实现
 
-- [ ] 实现 `edit_file` 工具（Search & Replace）
-- [ ] 测试上下文溢出，实现滑动窗口裁剪
-- [ ] 添加 grep_search 工具
+- [ ] 测试上下文溢出，实现滑动窗口裁剪或 PreCompact
 - [ ] config.mjs 预留 `FAST_MODEL`、`STRONG_MODEL`
+- [ ] 配色方案微调
+- [ ] Ink 支持 markdown 渲染（Agent 回复的格式化显示）
