@@ -102,9 +102,6 @@ async function main() {
   });
 
   logger.start({
-    model: DEFAULT_MODEL,
-    tools: agent.toolSchemas.map(t => t.name),
-    logFile,
     systemPrompt: SYSTEM_PROMPT,
     toolSchemas: agent.toolSchemas,
   });

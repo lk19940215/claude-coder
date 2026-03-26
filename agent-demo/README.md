@@ -33,6 +33,24 @@ node src/eval.mjs fix_bug --log  # 开启详细日志（输出到 logs/eval-*.lo
 node src/eval.mjs --list       # 列出所有可用用例
 ```
 
+```
+场景 A — 代码分析委派
+
+用 task 工具分析 src/tools 目录下每个工具文件的功能和参数
+
+场景 B — 搜索汇总委派
+
+用 task 委派一个子任务：在项目中搜索所有 export 的函数，按文件分类汇总
+
+场景 C — 模型自主判断是否用 task（不显式要求）
+
+我想了解 test-example 下三个子项目的代码质量，哪些函数缺少错误处理
+
+场景 D — task + edit 组合（task 调研 → 父 Agent 修改）
+
+先用 task 分析 test-example/shopping-cart 所有文件，找出潜在 bug，然后帮我修复
+```
+
 ## 项目结构
 
 ```

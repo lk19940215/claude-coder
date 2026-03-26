@@ -69,7 +69,7 @@ export class Logger {
     return this.file;
   }
 
-  start({ model, tools, logFile, systemPrompt, toolSchemas }) {
+  start({ systemPrompt, toolSchemas }) {
     if (systemPrompt) {
       this._section('System Prompt', `[已注入] ${systemPrompt.split('\n')[0]}...`);
     }
