@@ -34,7 +34,7 @@
 | `"textGrowth": "height"` / `"width"` | → `"auto"`（**fixed-width 和 fixed-width-height 是合法值，不要改**）|
 | 变量 type 非 boolean/color/number/string | 删除该变量 |
 | `descendants` 为数组 | → 转为对象 |
-| `descendants` 包含 `children` 注入 | → 删除 children，只保留属性覆盖 |
+| `descendants` 值中同时有 `type` 和 `children` | → 对象替换和 children 替换是独立模式，不能混用；保留其中一种 |
 | reusable 组件无子节点 | → 添加占位子节点 |
 | `"ref": "sys/xxx"` | → `"sys:xxx"` |
 | `"$sys/color.x"` | → `"$sys:color.x"` |

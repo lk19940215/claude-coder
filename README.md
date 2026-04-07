@@ -30,8 +30,6 @@ claude-coder run "用 React + Express 做一个带登录的 Todo 应用"
 
 > 你是后端出身，或者独立开发者，没有设计师搭档。每次做前端页面都在找模板、抄样式，结果还是不满意。
 
-> ⚠️ **Windows 已知限制**：`.pen` 文件的跨文件组件引用（`ref: "sys:header"`）在 Windows 的 Pencil 插件中不受支持（Pencil应用也不支持）。Mac 桌面应用、插件均正常预览。建议在 Mac 上使用 design 命令生成和预览设计稿。跨文件变量引用（`$sys:color.bg`）和同文件内组件引用在所有平台均可用。
-
 **✨ Claude Coder 的解法：**
 
 ```bash

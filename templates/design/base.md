@@ -17,6 +17,7 @@
 | 4 | 圆角是 `cornerRadius` | `"cornerRadius": 12` | `"borderRadius": 12` |
 | 5 | 独立 `x`, `y` | `"x": 0, "y": 0` | `"position": {"x":0,"y":0}` |
 | 6 | stroke 是对象 | `{"align":"center","thickness":2,"fill":"#ccc"}` | `"stroke":"#ccc"` |
+| 6b | stroke 支持个别边和虚线 | `{"thickness":{"top":1,"right":0,"bottom":0,"left":0},"dashPattern":[5,3]}` | — |
 | 7 | 颜色 hex 格式 | `"#RRGGBB"` / `"#RRGGBBAA"` | `rgba(...)` / `transparent` |
 | 8 | frame 默认 horizontal | 只写 `"layout":"vertical"` | 不写 `"layout":"horizontal"` |
 | 9 | fontFamily 直接写字体名 | `"Inter, system-ui, sans-serif"` | `"$sys:font.primary"` |
@@ -34,7 +35,7 @@
 - **ref**: ref, descendants（+ 可覆盖根属性）
 - **rectangle**: fill, stroke, effect, cornerRadius
 - **ellipse**: fill, stroke, effect, innerRadius, startAngle, sweepAngle
-- **icon_font**: fill, effect, iconFontName, iconFontFamily, weight
+- **icon_font**: fill, effect, iconFontName, iconFontFamily, weight — 可用字体: `lucide` / `feather` / `Material Symbols Outlined` / `Material Symbols Rounded` / `Material Symbols Sharp` / `phosphor`
 - **group**: effect, layout, gap, padding, justifyContent, alignItems, children
 
 ---
@@ -64,23 +65,57 @@
   "rotation": 135, "size": {"width":1,"height":1} }
 ```
 
+### 图片 Fill
+
+```json
+{ "type": "image", "url": "./images/hero.png", "mode": "fill" }
+```
+mode: `"stretch"` | `"fill"` | `"fit"`，url 为相对 .pen 文件的路径
+
 ### 阴影 Effect
 
 ```json
 { "type": "shadow", "blur": 8, "color": "#00000019", "offset": {"x":0,"y":2} }
 ```
 
-### ref 实例
+### 背景模糊（毛玻璃）
+
+```json
+{ "type": "background_blur", "radius": 10 }
+```
+
+### ref 实例与 descendants
 
 - `descendants` 是对象，不是数组
 - 跨文件 ref: `"ref": "sys:btn-primary"`，descendants key: `"sys:child-id"`
-- **descendants 只覆盖已有子节点属性**（如 content/fill），不能注入 children
+- 嵌套 ref 的 descendants 路径用斜杠: `"ok-button/label": { "content": "Save" }`
+
+**descendants 支持 3 种模式：**
+
+1. **属性覆盖**（无 id/type/children）— 只修改属性值：
+```json
+"sys:card-title": { "content": "新标题", "fill": "#FFF" }
+```
+
+2. **对象替换**（有 type）— 完全替换该节点为新对象：
+```json
+"sys:card-icon": { "id": "icon", "type": "icon_font", "iconFontFamily": "lucide", "iconFontName": "check", "fill": "#FFF" }
+```
+
+3. **children 替换**（有 children，无 type）— 保留节点自身，替换其子元素（适用于容器型组件如面板、卡片、侧边栏）：
+```json
+"sys:sidebar-content": { "children": [
+  { "type": "ref", "id": "home-btn", "ref": "sys:btn-primary", "descendants": { "sys:btn-primary-label": { "content": "首页" } } },
+  { "type": "ref", "id": "settings-btn", "ref": "sys:btn-primary", "descendants": { "sys:btn-primary-label": { "content": "设置" } } }
+] }
+```
 
 ### 枚举值
 
 - justifyContent: `"start"` | `"center"` | `"end"` | `"space_between"` | `"space_around"`
 - alignItems: `"start"` | `"center"` | `"end"`
 - textGrowth: `"auto"` | `"fixed-width"` | `"fixed-width-height"`
+- slot（frame 属性）: 字符串数组，标记该 frame 为插槽，值为推荐填充的 reusable 组件 ID，如 `"slot": ["btn-primary", "icon-button"]`
 
 ---
 
