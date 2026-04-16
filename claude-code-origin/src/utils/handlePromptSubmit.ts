@@ -1,3 +1,69 @@
+// ============================================================================
+// 📁 文件：handlePromptSubmit.ts
+// 📌 一句话：控制用户输入"何时执行"——空闲立即跑，忙碌则入队等待。
+//
+// ── 总览 ────────────────────────────────────────────────────────────────
+//   本文件是 onSubmit 与 onQuery 之间的"调度层"。
+//   它不构建消息（由 processUserInput 负责），也不调 API（由 onQuery 负责），
+//   只解决一个问题：这条输入 是现在执行 还是入队稍后执行。
+//
+//   四层职责分离：
+//     onSubmit (REPL.tsx)       — UI 状态（输入框清空/scroll/stash/history）
+//     handlePromptSubmit (本文件) — 执行时机（队列、并发锁、abort controller）
+//     processUserInput          — 消息构建（文本/bash/命令/图片 → Message[]）
+//     onQuery (REPL.tsx)        — API 调用（组装上下文 → query.ts）
+//
+// ── 调用链位置 ──────────────────────────────────────────────────────────
+//   REPL.tsx onSubmit → handlePromptSubmit（本文件）
+//     → processUserInput → Message[]
+//     → onQuery → onQueryImpl → query.ts
+//
+// ── handlePromptSubmit() 流程 ───────────────────────────────────────────
+//   1. 已有队列命令（queuedCommands）？ → 直接走 executeUserInput → return
+//   2. 空输入？ → return
+//   3. exit/quit/:q 等退出词？ → 递归调自己走 /exit → return
+//   4. 展开粘贴引用（[Pasted text #N] → 实际内容）
+//   5. immediate 命令 + 正在 loading？ → 本地执行 JSX → return
+//   6. 正在 loading？ → enqueue() 入队 → return
+//   7. ★ 正常路径：构造 QueuedCommand → executeUserInput()
+//
+// ── executeUserInput() — 核心：组装数据 → 传入 onQuery ────────────────
+//
+//   本函数的核心工作就是：把用户的原始输入变成 Message[]，然后带上
+//   控制参数一起交给 onQuery，由 onQuery 决定是否调 Claude API。
+//
+//   流程：
+//   1. createAbortController()    — 新建中断控制器（Ctrl+C 时 abort）
+//   2. queryGuard.reserve()       — 加并发锁（防止多个查询同时跑）
+//   3. for 循环每条命令：
+//      └─ processUserInput(cmd)   — 核心！文本/bash/命令/图片 → Message[]
+//         返回 { messages, shouldQuery, allowedTools, model, effort }
+//   4. fileHistoryMakeSnapshot()  — 文件历史快照（undo 用）
+//   5. ★ 将组装好的数据传入 onQuery：
+//      await onQuery(
+//        newMessages,              — Message[]：processUserInput 构建的消息数组
+//        abortController,          — AbortController：中断控制
+//        shouldQuery,              — boolean：是否需要调 API（/model → false）
+//        allowedTools ?? [],       — string[]：额外允许的工具
+//        model ?? mainLoopModel,   — string：使用的模型（可被命令覆盖）
+//        onBeforeQuery,            — callback：API 前最后检查（仅 prompt 模式）
+//        primaryInput,             — string：用户原始输入（用于日志）
+//        effort,                   — EffortValue：推理深度控制
+//      )
+//   6. finally: 释放锁 + 清理 spinner
+//
+//   关键：shouldQuery=false 时 onQuery 会跳过 API 调用，只追加消息。
+//
+// ── 队列机制 ────────────────────────────────────────────────────────────
+//   Claude 处理中 → enqueue() 入队 → 完成后 useQueueProcessor 自动取出
+//   → 重走 executeUserInput()，确保每条输入都被处理，不会丢失。
+//
+// ── 斜杠命令的多级拦截 ─────────────────────────────────────────────────
+//   以 /model 为例：
+//     Claude 忙时 → onSubmit 的 immediate 分支直接执行（不到本文件）
+//     Claude 闲时 → 本文件 → processUserInput 作为普通斜杠命令处理
+//   本文件的 immediate 检查是 onSubmit 的补充，覆盖 isExternalLoading 边缘场景。
+// ============================================================================
 import type { UUID } from 'crypto'
 import { logEvent } from 'src/services/analytics/index.js'
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from 'src/services/analytics/metadata.js'
@@ -557,6 +623,16 @@ async function executeUserInput(params: ExecuteUserInputParams): Promise<void> {
             ? primaryCmd.value
             : undefined
         const shouldCallBeforeQuery = primaryMode === 'prompt'
+        // await onQuery(
+        //   newMessages,        // ① Message[] — processUserInput 构建的消息数组
+        //   abortController,    // ② AbortController — 用于中断查询
+        //   shouldQuery,        // ③ boolean — 是否需要调 API（/model 等命令为 false）
+        //   allowedTools ?? [], // ④ string[] — 额外允许的工具（某些命令授权特定工具）
+        //   model,              // ⑤ string — 使用的模型（可能被 skill 覆盖）
+        //   onBeforeQuery,      // ⑥ callback — API 调用前的拦截钩子（仅 prompt 模式）
+        //   primaryInput,       // ⑦ string — 用户原始输入文本
+        //   effort,             // ⑧ EffortValue — 推理深度（/ultraplan 等可指定）
+        // )
         await onQuery(
           newMessages,
           abortController,

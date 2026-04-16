@@ -1,14 +1,100 @@
 // ============================================================================
 // 📁 文件：query.ts
-// 📌 定位：单次请求管道；while(true) 驱动压缩→API→工具→恢复的循环核心
+// 📌 一句话：while(true) 循环驱动的 AI 对话引擎——调 API、执行工具、自动压缩、错误恢复。
 //
-// 🔗 调用链：QueryEngine.ask() → query() → queryLoop()
+// ── 总览 ────────────────────────────────────────────────────────────────
+//   这是整个 Claude Code 的"发动机"。一个 while(true) 循环不断：
+//   调 Claude API → 解析回复 → 执行工具 → 把工具结果追加到消息 → 再调 API…
+//   直到 Claude 回复 end_turn（没有 tool_use）或被用户中断。
 //
-// 核心概念：
-//   - queryLoop()：工具预算 → Snip → 微压缩 → 上下文折叠 → 自动压缩 → 流式 API →
-//     tool_use 执行与 yield tool_result，循环或退出
-//   - withhold：413/max_output/media 等可恢复错误扣留，不立即暴露给调用方
-//   - stop_reason：end_turn 退出；tool_use 继续；max_tokens 提升限制重试
+//   它是一个 AsyncGenerator：每个循环迭代 yield 出流式事件（StreamEvent）
+//   和消息（Message），由 REPL.tsx 的 onQueryImpl 通过 for-await 消费。
+//
+// ── 调用链位置 ──────────────────────────────────────────────────────────
+//   REPL.tsx onQueryImpl:
+//     for await (const event of query({messages, systemPrompt, ...})) {
+//       onQueryEvent(event)  // 流式事件 → React state
+//     }
+//
+//   子 agent 路径：runAgent.ts → query()（独立上下文）
+//
+// ── 入参（QueryParams）───────────────────────────────────────────────────
+//   {
+//     messages,         // Message[] — 完整对话历史
+//     systemPrompt,     // SystemPrompt — 系统提示词
+//     userContext,      // {key: value} — 用户上下文（cwd、git 状态等）
+//     systemContext,    // {key: value} — 系统上下文
+//     canUseTool,       // 工具权限判断函数
+//     toolUseContext,   // ToolUseContext — 工具执行时的完整上下文
+//     querySource,      // 'repl_main_thread' | 'agent:xxx' 等来源标识
+//   }
+//
+// ── query() vs queryLoop() ──────────────────────────────────────────────
+//   query()      — 薄包装：调 queryLoop()，完成后通知 consumed commands
+//   queryLoop()  — 真正的 while(true) 循环，1400+ 行核心逻辑
+//
+// ── queryLoop() 每次迭代的流程 ──────────────────────────────────────────
+//
+//   while (true) {
+//     // ① 上下文管理（瘦身，确保不超 token 限制）
+//     applyToolResultBudget()     — 大工具结果替换为摘要
+//     snipCompactIfNeeded()       — 历史裁剪（snip）
+//     microcompact()              — 微压缩（缓存编辑）
+//     applyCollapsesIfNeeded()    — 上下文折叠
+//     autocompact()               — 自动压缩（超阈值时 Haiku 生成摘要）
+//
+//     // ② 安全检查
+//     calculateTokenWarningState() — 超硬限制？→ yield error → return
+//
+//     // ③ ★ 调 Claude API（流式）
+//     for await (const message of callModel({messages, systemPrompt, ...})) {
+//       if (withheld) continue;   — 413/max_output 错误暂扣不 yield
+//       yield message;            — 流式事件推给 REPL
+//       收集 assistantMessages + toolUseBlocks
+//       streamingToolExecutor.addTool()  — 边流式边开始执行工具
+//     }
+//
+//     // ④ 用户中断检查
+//     aborted? → yield 中断消息 → return
+//
+//     // ⑤ 错误恢复（仅当 !needsFollowUp 时）
+//     prompt-too-long?  → contextCollapse 排空 / reactiveCompact → continue
+//     max_output_tokens? → 提升限制重试 / 注入恢复消息 → continue（最多 3 次）
+//     API error? → return
+//     stop hooks? → 阻止/重试 → continue 或 return
+//     token budget? → 预算耗尽检查 → continue 或 return
+//     无 tool_use → return { reason: 'completed' }  ✅ 正常结束
+//
+//     // ⑥ ★ 工具执行（有 tool_use 时）
+//     runTools() / streamingToolExecutor.getRemainingResults()
+//       → 执行每个工具 → yield tool_result 消息
+//     aborted? → return
+//
+//     // ⑦ 中间轮附件注入
+//     getAttachmentMessages()    — IDE 选区、文件变更等
+//     memoryPrefetch.consume()   — 相关记忆
+//     skillDiscovery.collect()   — 技能发现
+//     queuedCommands.drain()     — 队列中待处理的通知
+//
+//     // ⑧ 组装下一轮 state → continue（回到 ①）
+//     state = { messages: [...old, ...assistant, ...toolResults], ... }
+//   }
+//
+// ── 关键机制 ────────────────────────────────────────────────────────────
+//
+//   withhold（扣留）：
+//     413/max_output/media 错误不立即 yield 给调用方，先尝试恢复。
+//     恢复成功 → continue 重试；恢复失败 → yield error → return。
+//
+//   streaming tool execution：
+//     Claude 流式回复中一旦出现 tool_use block，立即开始执行工具，
+//     不等全部回复完成。节省 30-50% 的工具等待时间。
+//
+//   autocompact：
+//     token 超阈值时自动压缩历史（Haiku 生成摘要），缩减到阈值以下后继续。
+//
+//   turn 计数 & maxTurns：
+//     每次工具循环 turnCount++，超过 maxTurns 时强制退出。
 //
 // 详细文档：→ 源码阅读/02-核心对话循环.md
 // ============================================================================

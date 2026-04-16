@@ -1,3 +1,53 @@
+// ============================================================================
+// 📁 文件：processUserInput.ts
+// 📌 一句话：把用户输入（文本/bash/命令/图片）组装成 Message[]，推入对话消息流。
+//
+// ── 总览 ────────────────────────────────────────────────────────────────
+//   本文件是"输入分拣工厂"：接收用户的原始输入字符串，根据模式（prompt/bash）
+//   和前缀（/ 斜杠命令）走不同分支，最终输出标准化的 Message[] + shouldQuery 标记。
+//   shouldQuery=true 表示需要调 Claude API，false 表示本地处理完毕（如 /model 切模型）。
+//
+//   输出示例（用户输入 "帮我重构这个函数" + 粘贴一张截图）：
+//   {
+//     messages: [
+//       { type: 'user', content: [
+//           { type: 'text', text: '帮我重构这个函数' },
+//           { type: 'image', source: { type: 'base64', data: '...' } }
+//         ], imagePasteIds: [1] },
+//       { type: 'attachment', attachment: { type: 'ide_selection', ... } },
+//       { type: 'user', content: [{ type: 'text', text: '[Image: 800x600]' }], isMeta: true }
+//     ],
+//     shouldQuery: true
+//   }
+//
+// ── 调用链位置 ──────────────────────────────────────────────────────────
+//   REPL.tsx onSubmit → handlePromptSubmit → executeUserInput
+//     → processUserInput（本文件）→ 返回 Message[] → onQuery → query.ts
+//
+// ── 分拣流程（processUserInputBase）────────────────────────────────────
+//   按优先级从高到低判断：
+//
+//   1. 图片预处理：resize + 存盘 + metadata 收集
+//   2. bridge 远程命令安全检查
+//   3. ultraplan 关键词？ → processSlashCommand('/ultraplan ...') → return
+//   4. 附件提取（IDE 选区、todo、diff 等）→ attachmentMessages
+//   5. mode === 'bash'？ → processBashCommand() → return
+//   6. input.startsWith('/')？ → processSlashCommand() → return
+//   7. 普通文本 → processTextPrompt() → return
+//
+//   | 输入类型 | 处理函数               | shouldQuery | 示例                        |
+//   |---------|------------------------|-------------|-----------------------------|
+//   | bash    | processBashCommand()   | true        | bash 模式下 `ls -la`         |
+//   | 斜杠命令 | processSlashCommand()  | 视命令而定   | /model sonnet → false       |
+//   | ultraplan| processSlashCommand() | true        | 输入含 ultraplan 关键词       |
+//   | 普通文本 | processTextPrompt()    | true        | "帮我重构这个函数"            |
+//
+// ── Hook 拦截（processUserInput 外层）──────────────────────────────────
+//   分拣完成后，若 shouldQuery=true，会执行 UserPromptSubmit hooks：
+//     - blockingError → 阻止查询，返回错误消息
+//     - preventContinuation → 停止但保留上下文
+//     - additionalContexts → 追加 hook 附件消息
+// ============================================================================
 import { feature } from 'bun:bundle'
 import type {
   Base64ImageSource,

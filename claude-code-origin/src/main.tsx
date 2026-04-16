@@ -20,7 +20,6 @@
 // ============================================================================
 //
 // run() 是整个文件的核心，约 3000 行，做了三件事：
-//
 // 1️⃣ Commander 程序创建（~100 行）
 //    创建 Commander 实例，注册几十个命令行选项（--debug、-p、--model、
 //    --permission-mode、--resume、--mcp-config 等）
@@ -108,6 +107,27 @@
 //   → compact/       ⭐⭐⭐  上下文压缩策略
 //
 // 本文件（main.tsx）只是把所有东西组装好，交给上面那些模块去运行。
+// 子命令采用树形结构：
+// 
+// program (claude)
+// ├── mcp                    # 4006 行
+// │   ├── serve
+// │   ├── add-json
+// │   ├── remove
+// │   ├── list / get
+// │   └── reset-project-choices
+// ├── auth                   # 4212 行
+// │   ├── login / logout / status
+// ├── plugin                 # 4260 行
+// │   ├── validate / list / install / uninstall
+// │   ├── enable / disable / update
+// │   └── marketplace
+// │       ├── add / list / remove / update
+// ├── server / ssh / open    # 4074-4211（条件编译）
+// ├── doctor / update        # 4458-4474
+// ├── agents / auto-mode     # 4390-4416
+// ├── log / error / export   # 4524-4552（ANT-ONLY）
+// └── completion             # 4604
 // ============================================================================
 
 // ============================================================================
@@ -965,6 +985,7 @@ export async function main() {
   await run();
   profileCheckpoint('main_after_run');
 }
+
 async function getInputPrompt(prompt: string, inputFormat: 'text' | 'stream-json'): Promise<string | AsyncIterable<string>> {
   if (!process.stdin.isTTY &&
   // Input hijacking breaks MCP.
@@ -992,6 +1013,7 @@ async function getInputPrompt(prompt: string, inputFormat: 'text' | 'stream-json
   }
   return prompt;
 }
+
 // ============================================================================
 // 【第四层：⭐ run() 函数】— 真正的编排核心
 //
@@ -999,6 +1021,7 @@ async function getInputPrompt(prompt: string, inputFormat: 'text' | 'stream-json
 //       → ⭐ 主命令 action（2800 行！装配所有配置 → launchRepl）
 //       → 注册子命令（mcp/auth/plugin/doctor 等）
 // ============================================================================
+
 async function run(): Promise<CommanderCommand> {
   profileCheckpoint('run_function_start');
 
@@ -1024,12 +1047,15 @@ async function run(): Promise<CommanderCommand> {
     // 等待顶层副作用中启动的子进程完成（MDM + 钥匙串预读）
     // 几乎零成本——子进程在 ~135ms 的 import 期间就已完成
     // 必须在 init() 之前 resolve，因为 init() 会触发首次配置读取
+    // ① 等待预加载完成（MDM 企业配置 + 钥匙串预读）
     await Promise.all([ensureMdmSettingsLoaded(), ensureKeychainPrefetchCompleted()]);
     profileCheckpoint('preAction_after_mdm');
+    // ② 运行时初始化（配置/遥测/策略/MCP）
     await init();
     profileCheckpoint('preAction_after_init');
 
     // 设置终端标题为 'claude'（在 init() 之后，因为 settings.json 可以禁用此行为）
+    // ③ 设置终端标题
     if (!isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE)) {
       process.title = 'claude';
     }
@@ -1039,15 +1065,18 @@ async function run(): Promise<CommanderCommand> {
     const {
       initSinks
     } = await import('./utils/sinks.js');
+    // ④ 初始化日志/数据上报
     initSinks();
     profileCheckpoint('preAction_after_sinks');
 
     // 在 preAction 中处理 --plugin-dir，确保所有子命令都能访问到插件目录
+    // ⑤ 处理 --plugin-dir
     const pluginDir = thisCommand.getOptionValue('pluginDir');
     if (Array.isArray(pluginDir) && pluginDir.length > 0 && pluginDir.every(p => typeof p === 'string')) {
       setInlinePlugins(pluginDir);
       clearPluginCache('preAction: --plugin-dir inline plugins');
     }
+    // ⑥ 数据库迁移
     runMigrations();
     profileCheckpoint('preAction_after_migrations');
 
@@ -1055,16 +1084,18 @@ async function run(): Promise<CommanderCommand> {
     // Fails open - if fetch fails, continues without remote settings
     // Settings are applied via hot-reload when they arrive
     // Must happen after init() to ensure config reading is allowed
+    // ⑦ 加载企业远程配置（非阻塞）
     void loadRemoteManagedSettings();
     void loadPolicyLimits();
     profileCheckpoint('preAction_after_remote_settings');
-
+    // ⑧ 配置同步上传（非阻塞）
     // 配置同步：上传本地配置到远端（非阻塞，失败不影响启动）
     if (feature('UPLOAD_USER_SETTINGS')) {
       void import('./services/settingsSync/index.js').then(m => m.uploadUserSettingsInBackground());
     }
     profileCheckpoint('preAction_after_settings_sync');
   });
+
   program.name('claude').description(`Claude Code - starts an interactive session by default, use -p/--print for non-interactive output`).argument('[prompt]', 'Your prompt', String)
   // Subcommands inherit helpOption via commander's copyInheritedSettings —
   // setting it once here covers mcp, plugin, auth, and all other subcommands.
@@ -1104,17 +1135,11 @@ async function run(): Promise<CommanderCommand> {
   // top-level option. Single-value + collect accumulator means each
   // --plugin-dir takes exactly one arg; repeat the flag for multiple dirs.
   .option('--plugin-dir <path>', 'Load plugins from a directory for this session only (repeatable: --plugin-dir A --plugin-dir B)', (val: string, prev: string[]) => [...prev, val], [] as string[]).option('--disable-slash-commands', 'Disable all skills', () => true).option('--chrome', 'Enable Claude in Chrome integration').option('--no-chrome', 'Disable Claude in Chrome integration').option('--file <specs...>', 'File resources to download at startup. Format: file_id:relative_path (e.g., --file file_abc:doc.txt file_def:img.png)')
-  // ================================================================
-  // ⭐⭐⭐ 主命令 action 处理器（约 2800 行）⭐⭐⭐
-  //
-  // 这是整个应用最核心的函数，负责：
-  //   A. 解析选项 → B. 初始化配置 → C. setup() 设置工作目录
-  //   → D. 加载命令和 Agent → E. 处理非交互模式（-p/--print）
-  //   → F. showSetupScreens() 信任对话框
-  //   → G. 场景分发 → launchRepl() 启动交互界面
-  // ================================================================
+  // 主命令 action 处理器（约 2800 行）：A→B→C→D→F→E→G 七阶段
   .action(async (prompt, options) => {
     profileCheckpoint('action_handler_start');
+
+    // #region 🅰️ 阶段 A：解析选项 — 从 Commander 解构所有 CLI 参数，纯数据提取，可折叠跳过
 
     // --bare = 精简模式：跳过 hooks、LSP、插件、CLAUDE.md 等，只保留核心功能
     if ((options as {
@@ -1440,6 +1465,17 @@ async function run(): Promise<CommanderCommand> {
 
     // Get isNonInteractiveSession from state (was set before init())
     const isNonInteractiveSession = getIsNonInteractiveSession();
+
+    // #endregion 🅰️
+
+    // #region 🅱️ 阶段 B：配置初始化 — 权限/MCP/提示词/工具/模型/结构化输出，可折叠跳过
+    // 把 A 阶段解析出的原始参数转化为运行时配置：
+    //   - 权限模式（auto/default/bypassPermissions）
+    //   - MCP 服务器配置加载和合并
+    //   - 系统提示词（--system-prompt / --append-system-prompt）
+    //   - 工具过滤（allowedTools / disallowedTools / --tools）
+    //   - 模型选择和验证
+    //   - 结构化输出（--json-schema）
 
     // Validate that fallback model is different from main model
     if (fallbackModel && options.model && fallbackModel === options.model) {
@@ -2008,6 +2044,34 @@ async function run(): Promise<CommanderCommand> {
       }
     }
 
+    // #endregion 🅱️
+
+    // #region 🅲 阶段 C：setup() ⭐ — cwd/会话ID/UDS/插件注册，与 getCommands() 并行（📁 ./setup.ts）
+    // 核心职责：
+    //   1. 设置工作目录（cwd），可能创建 git worktree
+    //   2. 分配会话 ID
+    //   3. 启动 UDS 消息服务
+    //   4. 注册内置插件和技能
+    //
+    // 设计亮点：setup() 与 getCommands() / getAgentDefinitions() 并行执行
+    //   setup() 主要是 socket bind（~20ms），不占磁盘 I/O
+    //   getCommands() 是文件读取，两者不竞争资源
+    //   → 并行化节省 ~28ms 启动时间
+    //
+    // setup(cwd, permissionMode, ...) {
+    //   ① 自定义会话 ID（如果 --session-id 提供）
+    //   ② 启动 UDS 消息服务（socket bind，~20ms）
+    //   ③ 终端备份恢复（iTerm2 / Terminal.app 中断恢复）
+    //   ④ setCwd() + worktree 创建（可能 chdir 到新目录）
+    //   ⑤ 后台任务启动：
+    //      - initSessionMemory()
+    //      - initContextCollapse()
+    //      - lockCurrentVersion()
+    //      - 插件预加载 / hooks 注册
+    //      - 归因跟踪 / 文件访问分析
+    //   ⑥ 安全检查：--dangerously-skip-permissions 在 root + 有网络时拒绝
+    // }
+
     // ⭐ 重要：setup() 必须在任何依赖工作目录(cwd)或 worktree 的代码之前调用
     profileCheckpoint('action_before_setup');
     logForDebugging('[STARTUP] Running setup()...');
@@ -2042,6 +2106,18 @@ async function run(): Promise<CommanderCommand> {
     await setupPromise;
     logForDebugging(`[STARTUP] setup() completed in ${Date.now() - setupStart}ms`);
     profileCheckpoint('action_after_setup');
+
+    // #endregion 🅲
+
+    // #region 🅳 阶段 D：加载命令和 Agent — 等待并行 Promise、模型确定、提示词组装，可折叠跳过
+    // setup() 完成后：
+    //   1. 等待并行启动的 getCommands() / getAgentDefinitions() 完成
+    //   2. 合并 CLI 传入的 --agents 定义
+    //   3. 解析主线程 Agent（--agent 或 settings.agent）
+    //   4. 计算有效模型（用户指定 > Agent 指定 > 默认）
+    //   5. 组装追加系统提示词（Teammate/Proactive/KAIROS/Assistant 等）
+    // 可折叠跳过，知道它做了"命令+Agent+模型"的最终确定即可。
+    // 
 
     // Replay user messages into stream-json only when the socket was
     // explicitly requested. The auto-generated socket is passive — it
@@ -2321,6 +2397,18 @@ async function run(): Promise<CommanderCommand> {
     let root!: Root;
     let getFpsMetrics!: () => FpsMetrics | undefined;
     let stats!: StatsStore;
+
+    // #endregion 🅳
+
+    // #region 🅵 阶段 F：信任对话框 + 信任后初始化 — Ink根/showSetupScreens/LSP/MCP/hooks/插件，可折叠跳过
+    // 仅交互模式（非 --print）执行：
+    //   1. 创建 Ink 渲染根节点
+    //   2. showSetupScreens()：信任对话框 → 权限确认 → 登录引导 → 版本检查
+    //   3. 信任建立后：初始化 LSP、校验设置、检查配额
+    //   4. MCP 预取和连接（并行）
+    //   5. SessionStart hooks 启动
+    //   6. 插件初始化
+    // 可折叠跳过。
 
     // Show setup screens after commands are loaded
     if (!isNonInteractiveSession) {
@@ -2689,6 +2777,17 @@ async function run(): Promise<CommanderCommand> {
       return;
     }
 
+    // #endregion 🅵
+
+    // #region 🅴 阶段 E：非交互模式 --print — headless AppState → runHeadless() → 退出，可折叠跳过
+        // 仅 -p/--print 模式执行（执行完直接 return，不进入 G 阶段）：
+    //   1. 构建 headless 版 AppState（精简版，无 UI 状态）
+    //   2. 处理 resume/continue/teleport 逻辑
+    //   3. runHeadless()：发请求 → 打印结果 → 退出
+    //   支持 text/json/stream-json 三种输出格式
+    // 可折叠跳过（除非你关心 SDK/CI 场景）。
+    // 
+
     // --print mode
     if (isNonInteractiveSession) {
       if (outputFormat === 'stream-json' || outputFormat === 'json') {
@@ -2980,6 +3079,29 @@ async function run(): Promise<CommanderCommand> {
     // Get deprecation warning for the initial model (resolvedInitialModel computed earlier for hooks parallelization)
     const deprecationWarning = getModelDeprecationWarning(resolvedInitialModel);
 
+    // #endregion 🅴
+
+    // #region 🅶 阶段 G：场景分发 → launchRepl() ⭐ — 组装 initialState + sessionConfig，7种场景最终都调用 launchRepl()
+    // 交互模式的最终目标——组装 initialState + sessionConfig → launchRepl()
+    //
+    // 核心数据结构：
+    //   initialState: AppState   ← 60+ 字段的全局状态快照
+    //   sessionConfig: REPLProps ← tools, commands, agents, prompt 等
+    //
+    // 场景分发（按优先级）：
+    //   1. --resume / --continue    → 恢复历史会话
+    //   2. cc:// URL                → Direct Connect 远程服务器
+    //   3. ssh <host>               → SSH 远程会话
+    //   4. assistant                → 助手模式（KAIROS）
+    //   5. 远程会话                  → CCR 容器远程
+    //   6. --resume + 历史对话       → 带历史记录的恢复
+    //   7. ⭐ 普通启动              → 大多数用户走到这里
+    //
+    // 所有场景最终都调用：
+    //   await launchRepl(root, { initialState }, { sessionConfig })
+    //   → 启动 screens/REPL.tsx 交互界面
+    // 
+
     // Build initial notification queue
     const initialNotifications: Array<{
       key: string;
@@ -3206,6 +3328,28 @@ async function run(): Promise<CommanderCommand> {
       cliAgents,
       initialState
     };
+    // ┌─────────────────────────────────────────────────────────────────────┐
+    // │  场景分发说明：以下 if/else if/else 共 7 个分支，每个分支对应一种   │
+    // │  启动场景，最终都调用 launchRepl()，但传入的 config 不同：          │
+    // │                                                                     │
+    // │  维度对比：                                                         │
+    // │  ┌──────────┬──────────────┬──────────────┬───────────────────────┐ │
+    // │  │ 场景     │ initialState │ tools/MCP    │ 特有配置              │ │
+    // │  ├──────────┼──────────────┼──────────────┼───────────────────────┤ │
+    // │  │ continue │ loaded.*     │ 完整本地     │ 历史 messages/快照    │ │
+    // │  │ connect  │ 默认         │ 空(远端提供) │ directConnectConfig   │ │
+    // │  │ ssh      │ 默认         │ 空(远端提供) │ sshSession            │ │
+    // │  │ assistant│ +isBriefOnly │ 空(远端提供) │ remoteSessionConfig   │ │
+    // │  │ CCR      │ +remoteUrl   │ 空(远端提供) │ remoteSessionConfig   │ │
+    // │  │ resume   │ resume.*     │ 完整本地     │ 历史 messages/快照    │ │
+    // │  │ 普通     │ 默认         │ 完整本地     │ (无额外配置)          │ │
+    // │  └──────────┴──────────────┴──────────────┴───────────────────────┘ │
+    // │                                                                     │
+    // │  规律：本地场景用 ...sessionConfig（含 tools/mcpClients）           │
+    // │        远程场景传 initialTools:[] + mcpClients:[] + 远程配置        │
+    // │        恢复场景用 ...sessionConfig 但覆盖 initialMessages 等历史    │
+    // └─────────────────────────────────────────────────────────────────────┘
+
     if (options.continue) {
       // Continue the most recent conversation directly
       let resumeSucceeded = false;
@@ -3239,6 +3383,11 @@ async function run(): Promise<CommanderCommand> {
           resume_duration_ms: Math.round(performance.now() - resumeStart)
         });
         resumeSucceeded = true;
+        // ── 场景 1: --continue（恢复最近会话）──────────────────────────
+        // 触发: claude --continue
+        // initialState: 从历史日志 loaded 出的状态
+        // sessionConfig: 完整本地 config + 覆盖历史 messages/快照/agent
+        // 特点: 自动选最近一条会话，无需用户选择
         await launchRepl(root, {
           getFpsMetrics,
           stats,
@@ -3281,6 +3430,11 @@ async function run(): Promise<CommanderCommand> {
         return await exitWithError(root, err instanceof DirectConnectError ? err.message : String(err), () => gracefulShutdown(1));
       }
       const connectInfoMessage = createSystemMessage(`Connected to server at ${_pendingConnect.url}\nSession: ${directConnectConfig.sessionId}`, 'info');
+      // ── 场景 2: Direct Connect（远程服务器连接）─────────────────────
+      // 触发: claude connect <url>
+      // initialState: 默认状态（本地无历史）
+      // sessionConfig: 手动组装，initialTools:[] + mcpClients:[]（远端提供）
+      // 特点: 传入 directConnectConfig，REPL 通过它与远程服务器通信
       await launchRepl(root, {
         getFpsMetrics,
         stats,
@@ -3347,6 +3501,11 @@ async function run(): Promise<CommanderCommand> {
         return await exitWithError(root, err instanceof SSHSessionError ? err.message : String(err), () => gracefulShutdown(1));
       }
       const sshInfoMessage = createSystemMessage(_pendingSSH.local ? `Local ssh-proxy test session\ncwd: ${sshSession.remoteCwd}\nAuth: unix socket → local proxy` : `SSH session to ${_pendingSSH.host}\nRemote cwd: ${sshSession.remoteCwd}\nAuth: unix socket -R → local proxy`, 'info');
+      // ── 场景 3: SSH 远程会话 ────────────────────────────────────────
+      // 触发: claude ssh <host> [dir]
+      // initialState: 默认状态，但 cwd 已切换为 sshSession.remoteCwd
+      // sessionConfig: 手动组装，initialTools:[] + mcpClients:[]（远端提供）
+      // 特点: 传入 sshSession，工具在远端执行，UI 在本地渲染
       await launchRepl(root, {
         getFpsMetrics,
         stats,
@@ -3443,6 +3602,11 @@ async function run(): Promise<CommanderCommand> {
         replBridgeEnabled: false
       };
       const remoteCommands = filterCommandsForRemoteMode(commands);
+      // ── 场景 4: Assistant 助手模式（KAIROS 远程观察者）───────────────
+      // 触发: claude assistant [sessionId]
+      // initialState: 默认 + isBriefOnly:true, kairosEnabled:false
+      // sessionConfig: 手动组装，tools/MCP 为空，commands 过滤为远程安全子集
+      // 特点: 纯查看者客户端，agent loop 在远端运行，本地只流式展示
       await launchRepl(root, {
         getFpsMetrics,
         stats,
@@ -3592,6 +3756,11 @@ async function run(): Promise<CommanderCommand> {
         // Pre-filter commands to only include remote-safe ones.
         // CCR's init response may further refine the list (via handleRemoteInit in REPL).
         const remoteCommands = filterCommandsForRemoteMode(commands);
+        // ── 场景 5: CCR 容器远程会话 ─────────────────────────────────
+        // 触发: claude <prompt> --remote 或 teleport 创建了 CCR 会话
+        // initialState: 默认 + remoteSessionUrl（用于 footer 显示）
+        // sessionConfig: 手动组装，tools/MCP 为空，commands 过滤为远程安全子集
+        // 特点: 本地 TUI + 远程 CCR 引擎，可传入初始 user message
         await launchRepl(root, {
           getFpsMetrics,
           stats,
@@ -3838,6 +4007,11 @@ async function run(): Promise<CommanderCommand> {
       if (resumeData) {
         maybeActivateProactive(options);
         maybeActivateBrief(options);
+        // ── 场景 6: --resume / --from-pr / teleport（恢复指定会话）────
+        // 触发: claude --resume <id> 或 claude --from-pr <url> 或 teleport 恢复
+        // initialState: 从历史日志恢复的状态
+        // sessionConfig: 完整本地 config + 覆盖历史 messages/快照/agent
+        // 特点: 与场景 1 类似，但来源更多样（session ID / PR / teleport）
         await launchRepl(root, {
           getFpsMetrics,
           stats,
@@ -3903,6 +4077,11 @@ async function run(): Promise<CommanderCommand> {
         }
       }
       const initialMessages = deepLinkBanner ? [deepLinkBanner, ...hookMessages] : hookMessages.length > 0 ? hookMessages : undefined;
+      // ── 场景 7: ⭐ 普通启动（默认路径，大多数用户走这里）────────────
+      // 触发: 直接运行 claude（无特殊标志）
+      // initialState: 完整默认状态
+      // sessionConfig: 完整 ...sessionConfig（含全部 tools/commands/mcpClients）
+      // 特点: 最简洁的调用，只额外传入 deepLink banner 和 hook messages
       await launchRepl(root, {
         getFpsMetrics,
         stats,
@@ -3913,6 +4092,8 @@ async function run(): Promise<CommanderCommand> {
         pendingHookMessages
       }, renderAndRun);
     }
+
+    // #endregion 🅶
   }).version(`${MACRO.VERSION} (Claude Code)`, '-v, --version', 'Output the version number');
 
   // Worktree flags
@@ -4619,6 +4800,7 @@ Examples:
   profileReport();
   return program;
 }
+
 async function logTenguInit({
   hasInitialPrompt,
   hasStdin,
